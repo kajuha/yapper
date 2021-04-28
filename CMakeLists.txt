@@ -56,6 +56,7 @@ find_package(catkin REQUIRED COMPONENTS
    JogParam.msg
    PosParam.msg
    SensorState.msg
+   PlatformState.msg
    TotalState.msg
    ChatIn.msg
  )

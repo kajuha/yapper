@@ -72,7 +72,8 @@ typedef struct _SensorState {
 
 // 플랫폼 정보
 typedef struct _PlatformState {
-	int32_t state;	// ready=0, stop=1, run=2, error=3 
+	int32_t state;	// ready=0, stop=1, run=2, error=3
+    int32_t mode;
 } PlatformState;
 
 // 총 정보
@@ -145,6 +146,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
         uint32_t command;
         Command cmd = None;
         int len, addr_len, recv_len;
+
+        ros::Time now;
 
         while (clientOpen && ros::ok()) {
             // 소켓 열기
@@ -284,15 +287,47 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 printf("Receviced StopInfoIn, trail byte(%d)\n", trail_len-COMMAND_SIZE);
                                 memcpy(&stopInfoIn, buffer+COMMAND_SIZE, sizeof(stopInfoIn));
                                 printf("stop: %d\n", stopInfoIn.stop);
+                                platformStateOut.mode = Stop;
+
+                                now = ros::Time::now();
+                                chatIn.header.stamp = now;
+
+                                chatIn.command = platformStateOut.mode;
+
+                                chatIn_pub->publish(chatIn);
                             break;
                             case Estop:
                                 printf("Receviced Estop, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+                                platformStateOut.mode = Estop;
+
+                                now = ros::Time::now();
+                                chatIn.header.stamp = now;
+
+                                chatIn.command = platformStateOut.mode;
+
+                                chatIn_pub->publish(chatIn);
                             break;
                             case SetPosMode:
                                 printf("Receviced SetPosMode, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+                                platformStateOut.mode = SetPosMode;
+
+                                now = ros::Time::now();
+                                chatIn.header.stamp = now;
+
+                                chatIn.command = platformStateOut.mode;
+
+                                chatIn_pub->publish(chatIn);
                             break;
                             case SetJogMode:
                                 printf("Receviced SetJogMode, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+                                platformStateOut.mode = SetJogMode;
+
+                                now = ros::Time::now();
+                                chatIn.header.stamp = now;
+
+                                chatIn.command = platformStateOut.mode;
+
+                                chatIn_pub->publish(chatIn);
                             break;
                             case SetControlMode:
                                 static uint32_t controlMode, controlModePre;
@@ -377,8 +412,32 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 JogInfo jogInfoIn;
                                 memcpy(&jogInfoIn, buffer+COMMAND_SIZE, sizeof(jogInfoIn));
                                 printf("Receviced SetJogState, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                                printf("f: %d, r: %d, l: %d, r: %d, c: %d, cw: %d\n",
+                                printf("f: %d, r: %d, l: %d, r: %d, cw: %d, ccw: %d\n",
                                     jogInfoIn.front, jogInfoIn.rear, jogInfoIn.left, jogInfoIn.right, jogInfoIn.cw, jogInfoIn.ccw);
+
+                                now = ros::Time::now();
+                                chatIn.header.stamp = now;
+
+                                chatIn.command = platformStateOut.mode;
+                                
+                                chatIn.jogParam.jogInfo.front = jogInfoIn.front;
+                                chatIn.jogParam.jogInfo.rear = jogInfoIn.rear;
+                                chatIn.jogParam.jogInfo.left = jogInfoIn.left;
+                                chatIn.jogParam.jogInfo.right = jogInfoIn.right;
+                                chatIn.jogParam.jogInfo.cw = jogInfoIn.cw;
+                                chatIn.jogParam.jogInfo.ccw = jogInfoIn.ccw;
+
+                                chatIn.jogParam.velParams.x.acc = jogVelParamsIn.x.acc;
+                                chatIn.jogParam.velParams.y.acc = jogVelParamsIn.y.acc;
+                                chatIn.jogParam.velParams.z.acc = jogVelParamsIn.z.acc;
+                                chatIn.jogParam.velParams.x.vel = jogVelParamsIn.x.vel;
+                                chatIn.jogParam.velParams.y.vel = jogVelParamsIn.y.vel;
+                                chatIn.jogParam.velParams.z.vel = jogVelParamsIn.z.vel;
+                                chatIn.jogParam.velParams.x.vmax =jogVelParamsIn.x.vmax;
+                                chatIn.jogParam.velParams.y.vmax =jogVelParamsIn.y.vmax;
+                                chatIn.jogParam.velParams.z.vmax =jogVelParamsIn.z.vmax;
+
+                                chatIn_pub->publish(chatIn);
                             break;
                             case SetPos:
                                 static PosState posStateIn, posStateInPre;
@@ -405,6 +464,27 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             break;
                             case StartPosControl:
                                 printf("Receviced StartPosControl, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+
+                                now = ros::Time::now();
+                                chatIn.header.stamp = now;
+
+                                chatIn.command = platformStateOut.mode;
+
+                                chatIn.posParam.posState.x = posStateIn.x;
+                                chatIn.posParam.posState.y = posStateIn.y;
+                                chatIn.posParam.posState.z = posStateIn.z;
+
+                                chatIn.posParam.velParams.x.acc = posVelParamsIn.x.acc;
+                                chatIn.posParam.velParams.y.acc = posVelParamsIn.y.acc;
+                                chatIn.posParam.velParams.z.acc = posVelParamsIn.z.acc;
+                                chatIn.posParam.velParams.x.vel = posVelParamsIn.x.vel;
+                                chatIn.posParam.velParams.y.vel = posVelParamsIn.y.vel;
+                                chatIn.posParam.velParams.z.vel = posVelParamsIn.z.vel;
+                                chatIn.posParam.velParams.x.vmax = posVelParamsIn.x.vmax;
+                                chatIn.posParam.velParams.y.vmax = posVelParamsIn.y.vmax;
+                                chatIn.posParam.velParams.z.vmax = posVelParamsIn.z.vmax;
+
+                                chatIn_pub->publish(chatIn);
                             break;
                             case GetTotal:
                                 printf("Receviced GetTotal, trail byte(%d)\n", trail_len-COMMAND_SIZE);
@@ -544,6 +624,14 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             break;
                             case InitPlatform:
                                 printf("Receviced InitPlatform, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+                                platformStateOut.mode = InitPlatform;
+
+                                now = ros::Time::now();
+                                chatIn.header.stamp = now;
+
+                                chatIn.command = platformStateOut.mode;
+
+                                chatIn_pub->publish(chatIn);
                             break;
                             default:
                                 printf("unknown command\n");
@@ -736,13 +824,6 @@ int main(int argc, char** argv)
     ros::Subscriber test1_sub = nh.subscribe("test1_sub_topic", 100, callBackInt);
     
     ros::Publisher chatIn_pub = nh.advertise<chattering::ChatIn>("chatIn_topic", 100);
-
-    chattering::ChatIn msg1;
-
-    // std::string pkg_test_name;
-    // double pkg_test_ver;
-    // nh.getParam("pkg_test_name", pkg_test_name);
-    // nh.getParam("pkg_test_ver", pkg_test_ver);
 
     int thread_rate = 200;
     boost::thread hThread(fThread, &thread_rate, &chatIn_pub);
