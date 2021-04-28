@@ -1,0 +1,10 @@
+<launch>
+    <node pkg="aliencontrol" type="aliencontrol" name="aliencontrol_tcp_ui">
+        <param name="cmd" value="sh -c '/home/kajuha/catkin_ws/src/chatterbox/builds/executable/tcp_ui.exe;'"/>
+    </node>
+
+    <node pkg="chatterbox" type="chatterbox" name="chatterbox" output="screen">
+        <param name="pkg_name" value="chatterbox" />
+        <param name="tcp_port" value="10100"/>
+    </node>
+</launch>

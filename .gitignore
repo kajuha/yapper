@@ -1,3 +1,4 @@
 src/tcp_server
 .vscode
 test
+builds
