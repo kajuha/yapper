@@ -1,0 +1,6 @@
+<launch>
+    <node pkg="chattering" type="chattering" name="chattering" output="screen">
+        <param name = "pkg_name" value="chattering" />
+        <param name = "tcp_port" value = "10100"/>
+    </node>
+</launch>

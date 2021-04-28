@@ -1,0 +1,3 @@
+SensorState sensorState
+PosState posState
+uint32 platformState

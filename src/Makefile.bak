@@ -1,0 +1,3 @@
+all:
+	g++ chattering.cpp -o chattering
+	./chattering
