@@ -755,6 +755,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 ts_total = ts_now;
 
                 // 전체 송신할 바이트 계산
+                #if 0
                 totalStateOut.sensor.front += 0.1;
                 totalStateOut.sensor.rear += 0.2;
                 totalStateOut.sensor.right_front += 0.3;
@@ -763,6 +764,19 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 totalStateOut.pos.y += 0.6;
                 totalStateOut.pos.z += 0.7;
                 totalStateOut.platform.state += 8;
+                #else
+                platformStateOut.state = chatOut_.platformState.state; 
+                platformStateOut.mode = chatOut_.platformState.mode;
+
+                sensorStateOut.front = chatOut_.sensorState.front;
+                sensorStateOut.rear = chatOut_.sensorState.rear;
+                sensorStateOut.right_front = chatOut_.sensorState.right_front;
+                sensorStateOut.right_rear = chatOut_.sensorState.right_rear;
+                
+                posStateOut.x = chatOut_.posState.x;
+                posStateOut.y = chatOut_.posState.y;
+                posStateOut.z = chatOut_.posState.z;
+                #endif
 
                 command = GetTotal;
 
@@ -781,7 +795,13 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 ts_platform = ts_now;
 
                 // 전체 송신할 바이트 계산
+                #if 0
                 platformStateOut.state += 2;
+                platformStateOut.mode += 3;
+                #else
+                platformStateOut.state = chatOut_.platformState.state; 
+                platformStateOut.mode = chatOut_.platformState.mode;
+                #endif
 
                 command = GetPlatform;
 
@@ -800,10 +820,17 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 ts_sensor = ts_now;
 
                 // 전체 송신할 바이트 계산
+                #if 0
                 sensorStateOut.front += 0.1;
                 sensorStateOut.rear += 0.2;
                 sensorStateOut.right_front += 0.3;
                 sensorStateOut.right_rear += 0.4;
+                #else
+                sensorStateOut.front = chatOut_.sensorState.front;
+                sensorStateOut.rear = chatOut_.sensorState.rear;
+                sensorStateOut.right_front = chatOut_.sensorState.right_front;
+                sensorStateOut.right_rear = chatOut_.sensorState.right_rear;
+                #endif
 
                 command = GetSensor;
 
@@ -822,9 +849,15 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 ts_position = ts_now;
 
                 // 전체 송신할 바이트 계산
+                #if 0
                 posStateOut.x += 0.1;
                 posStateOut.y += 0.2;
                 posStateOut.z += 0.3;
+                #else
+                posStateOut.x = chatOut_.posState.x;
+                posStateOut.y = chatOut_.posState.y;
+                posStateOut.z = chatOut_.posState.z;
+                #endif
 
                 command = GetPos;
 
