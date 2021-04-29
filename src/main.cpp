@@ -6,6 +6,7 @@
 #include <string>
 
 #include "chatterbox/ChatIn.h"
+#include "chatterbox/ChatOut.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -128,7 +129,9 @@ void sigint_handler(int sig) {
 	clientOpen = 0;
 }
 
-void callBackInt(const chatterbox::ChatIn::ConstPtr& vel) {
+chatterbox::ChatOut chatOut_;
+void chatOutCallBack(const chatterbox::ChatOut chatOut) {
+    chatOut_ = chatOut;
 }
 
 void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
@@ -178,13 +181,13 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
         readWriteInfinite = 1;
         signal(SIGPIPE, sigpipe_handler);
 
-        struct timeval timeout;
-        timeout.tv_sec = 1;
-        timeout.tv_usec = 0;
+        // struct timeval timeout;
+        // timeout.tv_sec = 1;
+        // timeout.tv_usec = 0;
         
-        if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
-            perror("setsockopt failed ");
-        }
+        // if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+        //     perror("setsockopt failed ");
+        // }
 
         // 연결 요청 대기
         if (listen(sock, 5) < 0) {
@@ -321,7 +324,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                             chatIn.command = platformStateOut.mode;
 
-                            chatIn_pub->publish(chatIn);
+                            // chatIn_pub->publish(chatIn);
                         break;
                         case SetJogMode:
                             printf("Receviced SetJogMode, trail byte(%d)\n", trail_len-COMMAND_SIZE);
@@ -332,7 +335,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                             chatIn.command = platformStateOut.mode;
 
-                            chatIn_pub->publish(chatIn);
+                            // chatIn_pub->publish(chatIn);
                         break;
                         case SetControlMode:
                             static uint32_t controlMode, controlModePre;
@@ -498,6 +501,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                             if (totalState.period == 0) {
                             // 전체 송신할 바이트 계산
+                            #if 0
                             totalStateOut.sensor.front += 0.1;
                             totalStateOut.sensor.rear += 0.2;
                             totalStateOut.sensor.right_front += 0.3;
@@ -506,6 +510,20 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             totalStateOut.pos.y += 0.6;
                             totalStateOut.pos.z += 0.7;
                             totalStateOut.platform.state += 8;
+                            totalStateOut.platform.mode += 9;
+                            #else
+                            platformStateOut.state = chatOut_.platformState.state; 
+                            platformStateOut.mode = chatOut_.platformState.mode;
+
+                            sensorStateOut.front = chatOut_.sensorState.front;
+                            sensorStateOut.rear = chatOut_.sensorState.rear;
+                            sensorStateOut.right_front = chatOut_.sensorState.right_front;
+                            sensorStateOut.right_rear = chatOut_.sensorState.right_rear;
+                            
+                            posStateOut.x = chatOut_.posState.x;
+                            posStateOut.y = chatOut_.posState.y;
+                            posStateOut.z = chatOut_.posState.z;
+                            #endif
 
                             #if 0
                             byte_size = sizeof(command) + sizeof(totalStateOut);
@@ -536,7 +554,13 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                             if (platformState.period == 0) {
                             // 전체 송신할 바이트 계산
+                            #if 0
                             platformStateOut.state += 2;
+                            platformStateOut.mode += 3;
+                            #else
+                            platformStateOut.state = chatOut_.platformState.state; 
+                            platformStateOut.mode = chatOut_.platformState.mode;
+                            #endif
 
                             #if 0
                             byte_size = sizeof(command) + sizeof(platformStateOut);
@@ -567,10 +591,17 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                             if (sensorState.period == 0) {
                             // 전체 송신할 바이트 계산
+                            #if 0
                             sensorStateOut.front += 0.1;
                             sensorStateOut.rear += 0.2;
                             sensorStateOut.right_front += 0.3;
                             sensorStateOut.right_rear += 0.4;
+                            #else
+                            sensorStateOut.front = chatOut_.sensorState.front;
+                            sensorStateOut.rear = chatOut_.sensorState.rear;
+                            sensorStateOut.right_front = chatOut_.sensorState.right_front;
+                            sensorStateOut.right_rear = chatOut_.sensorState.right_rear;
+                            #endif
 
                             #if 0
                             byte_size = sizeof(command) + sizeof(sensorStateOut);
@@ -601,9 +632,15 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                             if (posState.period == 0) {
                             // 전체 송신할 바이트 계산
+                            #if 0
                             posStateOut.x += 0.1;
                             posStateOut.y += 0.2;
                             posStateOut.z += 0.3;
+                            #else
+                            posStateOut.x = chatOut_.posState.x;
+                            posStateOut.y = chatOut_.posState.y;
+                            posStateOut.z = chatOut_.posState.z;
+                            #endif
 
                             #if 0
                             byte_size = sizeof(command) + sizeof(posStateOut);
@@ -823,7 +860,7 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "chatterbox");
     ros::NodeHandle nh("~");
     
-    ros::Subscriber test1_sub = nh.subscribe("test1_sub_topic", 100, callBackInt);
+    ros::Subscriber test1_sub = nh.subscribe("/chatterbox/chatOut_topic", 100, chatOutCallBack);
     
     ros::Publisher chatIn_pub = nh.advertise<chatterbox::ChatIn>("chatIn_topic", 100);
 

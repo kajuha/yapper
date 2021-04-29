@@ -57,7 +57,7 @@ find_package(catkin REQUIRED COMPONENTS
    PosParam.msg
    SensorState.msg
    PlatformState.msg
-   TotalState.msg
+   ChatOut.msg
    ChatIn.msg
  )
 
@@ -112,7 +112,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES chatterbox
+  # LIBRARIES chatterbox
   CATKIN_DEPENDS roscpp std_msgs
   #DEPENDS system_lib
 )
@@ -124,14 +124,14 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
- include
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
-add_library(${PROJECT_NAME}_library
-  src/main.cpp
-)
+# add_library(${PROJECT_NAME}_library
+#   src/main.cpp
+# )
 
 
 ## Add cmake target dependencies of the library
@@ -152,12 +152,12 @@ add_executable(chatterbox src/main.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(chatterbox chatterbox_generate_messages_cpp)
+# add_dependencies(chatterbox chatterbox_generate_messages_cpp)
 # add_dependencies(chatterbox ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(chatterbox ${catkin_LIBRARIES})
-target_link_libraries(${PROJECT_NAME}_library ${catkin_LIBRARIES})
+# target_link_libraries(${PROJECT_NAME}_library ${catkin_LIBRARIES})
 
 #############
 ## Install ##
@@ -181,11 +181,11 @@ target_link_libraries(${PROJECT_NAME}_library ${catkin_LIBRARIES})
 # )
 
 ## Mark cpp header files for installation
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  FILES_MATCHING PATTERN "*.h"
-  PATTERN ".svn" EXCLUDE
-)
+# install(DIRECTORY include/${PROJECT_NAME}/
+#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+#   FILES_MATCHING PATTERN "*.h"
+#   PATTERN ".svn" EXCLUDE
+# )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES
