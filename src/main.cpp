@@ -7,6 +7,7 @@
 
 #include "chatterbox/ChatIn.h"
 #include "chatterbox/ChatOut.h"
+#include "chatterbox/WhisperOut.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -86,6 +87,120 @@ typedef struct _TotalState {
 } TotalState;
 #pragma pack(pop)
 
+// 상세 메시지 출력용 시작
+struct TFSensor {
+    double x1;
+    double y1;
+    double x2;
+    double theta;
+    double theta_deg;
+    double dl1;
+    double dl2;
+    double dl3;
+    double dl4;
+};
+
+struct Odometry {
+    double x;
+    double y;
+    double z;
+    double roll;
+    double pitch;
+    double yaw;
+};
+
+struct AGVOdometry {
+    TFSensor tfSensor;
+    Odometry odomWheel;
+    Odometry odomImu;
+    Odometry odom1AxisLidar;
+};
+
+struct LBox {
+    double comdPx;
+    double comdPy;
+    double comdYaw;
+    double feedPx;
+    double feedPy;
+    double feedYaw;
+    double initPx;
+    double initPy;
+    double initYaw;
+    double oldPx;
+    double oldPy;
+    double oldYaw;
+    double comdVx;
+    double comdVy;
+    double comdVyaw;
+    double feedVx;
+    double feedVy;
+    double feedVyaw;
+};
+
+struct PID {
+    double ref;
+    double fdb;
+    double err;
+    double kp;
+    double up;
+    double up1;
+    double ui;
+    double ud;
+    double outPreSat;
+    double outMax;
+    double outMin;
+    double out;
+    double satErr;
+    double ki;
+    double kc;
+    double kd;
+};
+
+struct PIDs {
+    PID px;
+    PID py;
+    PID yaw;
+};
+
+struct ProfileJoint {
+    double initPos;
+    double finalPos;
+    double lengthPos;
+    double outputPos;
+    double initVel;
+    double finalVel;
+    double lengthVel;
+    double outputVel;
+    double maxVel;
+    double comdVel;
+    double maxAccel;
+    double designAccel;
+    double ts;
+    double t;
+    double tCounter;
+    uint64_t startFlag;
+    double vIn;
+    double aIn;
+    double tIn;
+};
+
+struct ProfileJoints {
+    ProfileJoint px;
+    ProfileJoint py;
+    ProfileJoint yaw;
+};
+
+#pragma pack(push, 1)
+struct WhisperState {
+    AGVOdometry agvOdometry;
+    LBox lBox;
+    PIDs pids;
+    ProfileJoints profileJoints;
+};
+#pragma pack(pop)
+
+// 상세 메시지 출력용 끝
+
 // 명령어 종류
 typedef enum _Command {
 	None=0,
@@ -96,18 +211,21 @@ typedef enum _Command {
 	SetPos=9,
 	StartPosControl=10,
 	GetTotal=11, GetPlatform, GetSensor, GetPos,
-	InitPlatform=15
+	InitPlatform=15,
+    GetWhisper=16
 } Command;
 
 SensorState sensorStateOut;
 PosState posStateOut;
 PlatformState platformStateOut;
 TotalState totalStateOut;
+WhisperState whisperStateOut;
 
 StateInfo totalState;
 StateInfo platformState;
 StateInfo sensorState;
 StateInfo posState;
+StateInfo whisperState;
 
 int sock, client_sock;
 
@@ -134,6 +252,11 @@ void chatOutCallBack(const chatterbox::ChatOut chatOut) {
     chatOut_ = chatOut;
 }
 
+chatterbox::WhisperOut whisperOut_;
+void whisperOutCallBack(const chatterbox::WhisperOut whisperOut) {
+    whisperOut_ = whisperOut;
+}
+
 void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
     ros::NodeHandlePtr node = boost::make_shared<ros::NodeHandle>();
     ros::Rate rate(*thread_rate);
@@ -146,10 +269,13 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
     uint32_t command;
     Command cmd = None;
     int len, addr_len, recv_len;
+    int ret;
 
     ros::Time now;
 
+    printf("clientOpen while start (%d line)\n", __LINE__);
     while (clientOpen && ros::ok()) {
+        printf("clientOpen while started (%d line)\n", __LINE__);
         // 소켓 열기
         if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
             perror("socket ");
@@ -167,20 +293,27 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
         printf("tcp_port: %d \n", tcp_port);
         addr.sin_port = htons(tcp_port);
 
+        // time_wait 제거하기
+        // int option = 1;
+        // setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+
         // 소켓 설정 등록
         if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
             perror("bind ");
-            return;
+            // return;
+            usleep(500000);
+            continue;
         }
         printf("bind registerd\n");
 
         // 시그널 핸들러 등록
-        signal(SIGINT, sigint_handler);
+        // signal(SIGINT, sigint_handler);
 
         // 시그널 핸들러 등록
         readWriteInfinite = 1;
         signal(SIGPIPE, sigpipe_handler);
 
+        // 리슨을 타임아웃으로 설정하고 싶을 경우
         // struct timeval timeout;
         // timeout.tv_sec = 1;
         // timeout.tv_usec = 0;
@@ -192,30 +325,36 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
         // 연결 요청 대기
         if (listen(sock, 5) < 0) {
             perror("listen ");
-            return;
+            // return;
+            usleep(500000);
+            continue;
         }
 
         addr_len = sizeof(client_addr);
 
         printf("waiting for client..\n");
 
+        printf("socket : %d\n", sock);
         // 연결 수락
         if ((client_sock = accept(sock, (struct sockaddr *)&client_addr, (socklen_t*)&addr_len)) < 0) {
             perror("accept ");
-            goto PROGRAM_END;
-            return;
+            // goto PROGRAM_END;
+            // return;
+            usleep(500000);
+            continue;
         } else {
             printf("clinet ip : %s\n", inet_ntoa(client_addr.sin_addr));	
             printf("client socket open\n");	
         }
+        printf("socket : %d\n", sock);
         printf("client_sock: %d\n", client_sock);
 
         memset(buffer, '\0', sizeof(buffer));
         
         struct timeval time_now{};
         gettimeofday(&time_now, nullptr);
-        time_t ts_now, ts_total, ts_platform, ts_sensor, ts_position, ts_dummy;
-        ts_dummy = ts_total = ts_platform = ts_sensor = ts_position = ts_now = (time_now.tv_sec * 1000) + (time_now.tv_usec / 1000);
+        time_t ts_now, ts_total, ts_platform, ts_sensor, ts_position, ts_whisper, ts_dummy;
+        ts_dummy = ts_total = ts_platform = ts_sensor = ts_position = ts_whisper = ts_now = (time_now.tv_sec * 1000) + (time_now.tv_usec / 1000);
 
         char *u8_ptr;
         int byte_size;
@@ -230,9 +369,10 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
         memset((char*)&platformStateOut, '\0', sizeof(platformStateOut));
         memset((char*)&totalStateOut, '\0', sizeof(totalStateOut));
 
-        printf("read/write start\n");
+        printf("readWriteInfinite while start (%d line)\n", __LINE__);
         // 통신
         while (readWriteInfinite && ros::ok()) {
+            // printf("readWriteInfinite while started (%d line)\n", __LINE__);
             gettimeofday(&time_now, nullptr);
             ts_now = (time_now.tv_sec * 1000) + (time_now.tv_usec / 1000);
             #define DATA_LENGTH_BYTE	4
@@ -675,6 +815,44 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                             chatIn_pub->publish(chatIn);
                         break;
+                        case GetWhisper:
+                            printf("Receviced GetWhisper, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+                            memcpy(&whisperState, buffer+COMMAND_SIZE, sizeof(StateInfo));
+                            printf("period: %d\n", whisperState.period);
+
+                            if (whisperState.period == 0) {
+                                // 전체 송신할 바이트 계산
+                                #if 0
+                                #else
+                                whisperStateOut.agvOdometry.tfSensor.x1 = whisperOut_.agvOdometry.tfSensor.x1;
+                                whisperStateOut.agvOdometry.odomWheel.x = whisperOut_.agvOdometry.odomWheel.x;
+                                whisperStateOut.agvOdometry.odomImu.x = whisperOut_.agvOdometry.odomImu.x;
+                                whisperStateOut.agvOdometry.odom1AxisLidar.x = whisperOut_.agvOdometry.odom1AxisLidar.x;
+                                whisperStateOut.lBox.comdPx = whisperOut_.lBox.comdPx;
+                                whisperStateOut.pids.px.ref = whisperOut_.pids.px.ref;
+                                whisperStateOut.pids.py.ref = whisperOut_.pids.py.ref;
+                                whisperStateOut.pids.yaw.ref = whisperOut_.pids.yaw.ref;
+                                whisperStateOut.profileJoints.px.initPos = whisperOut_.profileJoints.px.initPos;
+                                whisperStateOut.profileJoints.py.initPos = whisperOut_.profileJoints.py.initPos;
+                                whisperStateOut.profileJoints.yaw.initPos = whisperOut_.profileJoints.yaw.initPos;
+                                whisperStateOut.profileJoints.yaw.tIn = whisperOut_.profileJoints.yaw.tIn;
+                                #endif
+
+                                #if 0
+                                #else							
+                                byte_size = sizeof(command) + sizeof(whisperStateOut);
+                                u8_ptr = (char*)&byte_size;
+                                memcpy(buffer, u8_ptr, sizeof(byte_size));
+                                u8_ptr = (char*)&command;
+                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
+                                u8_ptr = (char*)&whisperStateOut;
+                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(whisperStateOut));
+                                buffer[ACK_IDX] = ACK_ONE;
+                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(whisperStateOut), 0);
+                                #endif
+                            } else {
+                            }
+                        break;
                         default:
                             printf("unknown command\n");
                     }
@@ -871,17 +1049,50 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 buffer[ACK_IDX] = ACK_STR;
                 send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(posStateOut), 0);
             }
+            
+            if (whisperState.period !=0 && whisperState.period <= (ts_now-ts_whisper)) {
+                ts_whisper = ts_now;
+
+                // 전체 송신할 바이트 계산
+                #if 0
+                #else
+                whisperStateOut.agvOdometry.tfSensor.x1 = whisperOut_.agvOdometry.tfSensor.x1;
+                whisperStateOut.agvOdometry.odomWheel.x = whisperOut_.agvOdometry.odomWheel.x;
+                whisperStateOut.agvOdometry.odomImu.x = whisperOut_.agvOdometry.odomImu.x;
+                whisperStateOut.agvOdometry.odom1AxisLidar.x = whisperOut_.agvOdometry.odom1AxisLidar.x;
+                whisperStateOut.lBox.comdPx = whisperOut_.lBox.comdPx;
+                whisperStateOut.pids.px.ref = whisperOut_.pids.px.ref;
+                whisperStateOut.pids.py.ref = whisperOut_.pids.py.ref;
+                whisperStateOut.pids.yaw.ref = whisperOut_.pids.yaw.ref;
+                whisperStateOut.profileJoints.px.initPos = whisperOut_.profileJoints.px.initPos;
+                whisperStateOut.profileJoints.py.initPos = whisperOut_.profileJoints.py.initPos;
+                whisperStateOut.profileJoints.yaw.initPos = whisperOut_.profileJoints.yaw.initPos;
+                whisperStateOut.profileJoints.yaw.tIn = whisperOut_.profileJoints.yaw.tIn;
+                #endif
+
+                command = GetWhisper;
+                	
+                byte_size = sizeof(command) + sizeof(whisperStateOut);
+                u8_ptr = (char*)&byte_size;
+                memcpy(buffer, u8_ptr, sizeof(byte_size));
+                u8_ptr = (char*)&command;
+                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
+                u8_ptr = (char*)&whisperStateOut;
+                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(whisperStateOut));
+                buffer[ACK_IDX] = ACK_STR;
+                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(whisperStateOut), 0);
+            }
         }
         printf("read/write end\n");
         
-        close(client_sock);
-        printf("client socket closed\n");
+        ret = close(client_sock);
+        printf("client socket closed, ret: %d\n", ret);
 
-        close(sock);
+        ret = close(sock);
+        printf("socket closed, ret: %d\n", ret);
         // 소켓을 정상적으로 너무 빨리 닫고 재 열기할 경우
         // 해당 포트가 이미 사용중이라는 표시가 나타날 수 있음
-        usleep(100000);
-        printf("socket closed\n");
+        usleep(500000);
     }
 
     PROGRAM_END:
@@ -893,7 +1104,8 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "chatterbox");
     ros::NodeHandle nh("~");
     
-    ros::Subscriber test1_sub = nh.subscribe("/chatterbox/chatOut_topic", 100, chatOutCallBack);
+    ros::Subscriber chatOut_sub = nh.subscribe("/chatterbox/chatOut_topic", 100, chatOutCallBack);
+    ros::Subscriber whisperOut_sub = nh.subscribe("/chatterbox/whisperOut_topic", 100, whisperOutCallBack);
     
     ros::Publisher chatIn_pub = nh.advertise<chatterbox::ChatIn>("chatIn_topic", 100);
 
@@ -919,6 +1131,12 @@ int main(int argc, char** argv)
 
         main_rate.sleep();
     }
+    
+	readWriteInfinite = 0;
+	clientOpen = 0;
+	close(sock);
 
+    printf("hThread join\n");
     hThread.join();
+    printf("hThread joined\n");
 }
