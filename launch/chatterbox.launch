@@ -1,7 +1,7 @@
 <launch>
-    <node pkg="aliencontrol" type="aliencontrol" name="aliencontrol_tcp_ui">
+    <!-- <node pkg="aliencontrol" type="aliencontrol" name="aliencontrol_tcp_ui">
         <param name="cmd" value="sh -c '/home/kajuha/catkin_ws/src/chatterbox/builds/executable/tcp_ui.exe;'"/>
-    </node>
+    </node> -->
 
     <node pkg="chatterbox" type="chatterbox" name="chatterbox" output="screen">
         <param name="pkg_name" value="chatterbox" />

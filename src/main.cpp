@@ -278,8 +278,9 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
         printf("clientOpen while started (%d line)\n", __LINE__);
         // 소켓 열기
         if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-            perror("socket ");
-            return;
+            perror("socket open error, ");
+            // return;
+            continue;
         }
         printf("socket open\n");
 
@@ -294,12 +295,12 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
         addr.sin_port = htons(tcp_port);
 
         // time_wait 제거하기
-        // int option = 1;
-        // setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+        int option = 1;
+        setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
 
         // 소켓 설정 등록
         if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-            perror("bind ");
+            perror("bind error, ");
             // return;
             usleep(500000);
             continue;
@@ -314,20 +315,23 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
         signal(SIGPIPE, sigpipe_handler);
 
         // 리슨을 타임아웃으로 설정하고 싶을 경우
-        // struct timeval timeout;
-        // timeout.tv_sec = 1;
-        // timeout.tv_usec = 0;
+        struct timeval timeout;
+#define TCP_TIMEOUT_SEC 3
+        timeout.tv_sec = TCP_TIMEOUT_SEC;
+        timeout.tv_usec = 0;
         
-        // if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
-        //     perror("setsockopt failed ");
-        // }
+        if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+            perror("setsockopt failed ");
+        }
 
         // 연결 요청 대기
         if (listen(sock, 5) < 0) {
-            perror("listen ");
+            perror("listen error, ");
             // return;
             usleep(500000);
             continue;
+        } else {
+            printf("listen\n");
         }
 
         addr_len = sizeof(client_addr);
@@ -337,14 +341,18 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
         printf("socket : %d\n", sock);
         // 연결 수락
         if ((client_sock = accept(sock, (struct sockaddr *)&client_addr, (socklen_t*)&addr_len)) < 0) {
-            perror("accept ");
+            perror("accept error, ");
             // goto PROGRAM_END;
             // return;
+            printf("socket : %d\n", sock);
+            printf("client_sock: %d\n", client_sock);
+            close(client_sock);
+            close(sock);
             usleep(500000);
             continue;
         } else {
             printf("clinet ip : %s\n", inet_ntoa(client_addr.sin_addr));	
-            printf("client socket open\n");	
+            printf("client accept\n");	
         }
         printf("socket : %d\n", sock);
         printf("client_sock: %d\n", client_sock);
@@ -353,17 +361,19 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
         
         struct timeval time_now{};
         gettimeofday(&time_now, nullptr);
-        time_t ts_now, ts_total, ts_platform, ts_sensor, ts_position, ts_whisper, ts_dummy;
-        ts_dummy = ts_total = ts_platform = ts_sensor = ts_position = ts_whisper = ts_now = (time_now.tv_sec * 1000) + (time_now.tv_usec / 1000);
+        time_t ts_now, ts_total, ts_platform, ts_sensor, ts_position, ts_whisper, ts_dummy, ts_total_once;
+        ts_total_once = ts_dummy = ts_total = ts_platform = ts_sensor = ts_position = ts_whisper = ts_now = (time_now.tv_sec * 1000) + (time_now.tv_usec / 1000);
 
         char *u8_ptr;
         int byte_size;
 
+        // 통신 데이터 입력
         memset((char*)&totalState, '\0', sizeof(totalState));
         memset((char*)&sensorState, '\0', sizeof(sensorState));
         memset((char*)&platformState, '\0', sizeof(platformState));
         memset((char*)&posState, '\0', sizeof(posState));
 
+        // 통신 데이터 출력
         memset((char*)&sensorStateOut, '\0', sizeof(sensorStateOut));
         memset((char*)&posStateOut, '\0', sizeof(posStateOut));
         memset((char*)&platformStateOut, '\0', sizeof(platformStateOut));
@@ -379,7 +389,11 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
             // 버퍼개수 읽기(MSG_PEEK는 버퍼확인용)
             recv_len = recv(client_sock, buffer, DATA_LENGTH_BYTE, MSG_PEEK|MSG_DONTWAIT);
             if (recv_len >= DATA_LENGTH_BYTE) {
-                // printf("recv: %d\n", recv_len);
+                printf("1st recv_len: %d, ", DATA_LENGTH_BYTE);
+                for (int cnt=0; cnt<DATA_LENGTH_BYTE; cnt++) {
+                    printf("%02x ", buffer[cnt]);
+                }
+                printf("\n");
 
                 int trail_len;
                 // 뒤따르는 자료개수 확인
@@ -389,6 +403,13 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 // 뒤따르는 버퍼 읽기(MSG_PEEK는 버퍼확인용)
                 recv_len = recv(client_sock, buffer, DATA_LENGTH_BYTE+trail_len, MSG_PEEK|MSG_DONTWAIT);
                 if (recv_len >= DATA_LENGTH_BYTE+trail_len) {
+
+                    printf("2st recv_len: %d, ", trail_len);
+                    for (int i=0; i<trail_len; i++) {
+                        printf("%02x ", *(buffer+DATA_LENGTH_BYTE+i));
+                    }
+                    printf("\n");
+
                     // 응답 프레임 송신
                     #if 1
                     char ack_buffer[BUF_SIZE];
@@ -639,6 +660,9 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             memcpy(&totalState, buffer+COMMAND_SIZE, sizeof(StateInfo));
                             printf("period: %d\n", totalState.period);
 
+                            printf("ts_total_once time diff(ms) : %ld\n", ts_now-ts_total_once);
+                            ts_total_once = ts_now;
+
                             if (totalState.period == 0) {
                             // 전체 송신할 바이트 계산
                             #if 0
@@ -866,7 +890,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 // 커넥션을 강제해제했을 경우 0이 발생하였음
                 // MSG_DONTWIT를 추가하지 않았을 경우에는 무한대기가 되었음
                 // 우선 이케이스에는 0을 커넥션 종료로 처리함
-                printf("%d error\n", recv_len);
+                printf("client disconnect error, recv: %d \n", recv_len);
                 readWriteInfinite = 0;
                 continue;
             } else {
@@ -1083,7 +1107,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(whisperStateOut), 0);
             }
         }
-        printf("read/write end\n");
+        printf("tcp read/write end\n");
         
         ret = close(client_sock);
         printf("client socket closed, ret: %d\n", ret);
@@ -1095,7 +1119,6 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
         usleep(500000);
     }
 
-    PROGRAM_END:
     printf("program end\n");
 }
 
@@ -1131,10 +1154,6 @@ int main(int argc, char** argv)
 
         main_rate.sleep();
     }
-    
-	readWriteInfinite = 0;
-	clientOpen = 0;
-	close(sock);
 
     printf("hThread join\n");
     hThread.join();
