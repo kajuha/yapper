@@ -1,0 +1,5 @@
+<launch>
+	<include file="$(find chatterbox)/launch/base.launch" />
+
+	<include file="$(find chatterbox)/launch/client.launch" />
+</launch>
