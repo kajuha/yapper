@@ -41,7 +41,7 @@ typedef struct _VelParams {
 // 조그 정보
 typedef struct _JogInfo {
 	uint32_t front;	// push: 1, release: 0
-	uint32_t rear;	// push: 1, release: 0
+	uint32_t back;	// push: 1, release: 0
 	uint32_t left;	// push: 1, release: 0
 	uint32_t right;	// push: 1, release: 0
 	uint32_t cw;	// push: 1, release: 0
@@ -61,9 +61,9 @@ typedef struct _StateInfo {
 // 센서 정보
 typedef struct _SensorState {
 	double front;		// m
-	double rear;		// m
+	double back;		// m
 	double right_front;	// m
-	double right_rear;	// m
+	double right_back;	// m
 } SensorState;
 
 // 플랫폼 정보
@@ -360,7 +360,7 @@ int main() {
 							memcpy(&jogInfoIn, buffer+COMMAND_SIZE, sizeof(jogInfoIn));
 							printf("Receviced SetJogState, trail byte(%d)\n", trail_len-COMMAND_SIZE);
 							printf("f: %d, r: %d, l: %d, r: %d, c: %d, cw: %d\n",
-								jogInfoIn.front, jogInfoIn.rear, jogInfoIn.left, jogInfoIn.right, jogInfoIn.cw, jogInfoIn.ccw);
+								jogInfoIn.front, jogInfoIn.back, jogInfoIn.left, jogInfoIn.right, jogInfoIn.cw, jogInfoIn.ccw);
 						break;
 						case SetPos:
 							static PosState posStateIn, posStateInPre;
@@ -396,9 +396,9 @@ int main() {
 							if (totalState.period == 0) {
 							// 전체 송신할 바이트 계산
 							totalStateOut.sensor.front += 0.1;
-							totalStateOut.sensor.rear += 0.2;
+							totalStateOut.sensor.back += 0.2;
 							totalStateOut.sensor.right_front += 0.3;
-							totalStateOut.sensor.right_rear += 0.4;
+							totalStateOut.sensor.right_back += 0.4;
 							totalStateOut.pos.x += 0.5;
 							totalStateOut.pos.y += 0.6;
 							totalStateOut.pos.z += 0.7;
@@ -465,9 +465,9 @@ int main() {
 							if (sensorState.period == 0) {
 							// 전체 송신할 바이트 계산
 							sensorStateOut.front += 0.1;
-							sensorStateOut.rear += 0.2;
+							sensorStateOut.back += 0.2;
 							sensorStateOut.right_front += 0.3;
-							sensorStateOut.right_rear += 0.4;
+							sensorStateOut.right_back += 0.4;
 
 							#if 0
 							byte_size = sizeof(command) + sizeof(sensorStateOut);
@@ -608,9 +608,9 @@ int main() {
 
 				// 전체 송신할 바이트 계산
 				totalStateOut.sensor.front += 0.1;
-				totalStateOut.sensor.rear += 0.2;
+				totalStateOut.sensor.back += 0.2;
 				totalStateOut.sensor.right_front += 0.3;
-				totalStateOut.sensor.right_rear += 0.4;
+				totalStateOut.sensor.right_back += 0.4;
 				totalStateOut.pos.x += 0.5;
 				totalStateOut.pos.y += 0.6;
 				totalStateOut.pos.z += 0.7;
@@ -653,9 +653,9 @@ int main() {
 
 				// 전체 송신할 바이트 계산
 				sensorStateOut.front += 0.1;
-				sensorStateOut.rear += 0.2;
+				sensorStateOut.back += 0.2;
 				sensorStateOut.right_front += 0.3;
-				sensorStateOut.right_rear += 0.4;
+				sensorStateOut.right_back += 0.4;
 
 				command = GetSensor;
 
