@@ -1,7 +1,0 @@
-<launch>
-    <arg name="tcp_port" default="10200" doc="external tcp port"/>
-    <node pkg="chatterbox" type="chatterbox" name="katterbox" output="screen">
-        <param name="pkg_name" value="$(node name)" />
-        <param name="tcp_port" value="$(arg tcp_port)"/>
-    </node>
-</launch>

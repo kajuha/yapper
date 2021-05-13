@@ -59,17 +59,8 @@ find_package(catkin REQUIRED COMPONENTS
    PlatformState.msg
    ChatOut.msg
    ChatIn.msg
-   TFSensor.msg
-   Odometry.msg
-   AGVOdometry.msg
-   LBox.msg
-   PID.msg
-   PIDs.msg
-   ProfileJoint.msg
-   ProfileJoints.msg
+   CustomValue.msg
    WhisperOut.msg
-   CustomString.msg
-   CustomStringOut.msg
  )
 
 ## Generate services in the 'srv' folder

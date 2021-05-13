@@ -8,7 +8,6 @@
 #include "chatterbox/ChatIn.h"
 #include "chatterbox/ChatOut.h"
 #include "chatterbox/WhisperOut.h"
-#include "chatterbox/CustomStringOut.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -92,138 +91,35 @@ typedef struct _TotalState {
 } TotalState;
 #pragma pack(pop)
 
-// 상세 메시지 정보
-struct TFSensor {
-    double x1;
-    double y1;
-    double x2;
-    double theta;
-    double theta_deg;
-    double dl1;
-    double dl2;
-    double dl3;
-    double dl4;
-};
-
-struct Odometry {
-    double x;
-    double y;
-    double z;
-    double roll;
-    double pitch;
-    double yaw;
-};
-
-struct AGVOdometry {
-    TFSensor tfSensor;
-    Odometry odomWheel;
-    Odometry odomImu;
-    Odometry odom1AxisLidar;
-};
-
-struct LBox {
-    double comdPx;
-    double comdPy;
-    double comdYaw;
-    double feedPx;
-    double feedPy;
-    double feedYaw;
-    double initPx;
-    double initPy;
-    double initYaw;
-    double oldPx;
-    double oldPy;
-    double oldYaw;
-    double comdVx;
-    double comdVy;
-    double comdVyaw;
-    double feedVx;
-    double feedVy;
-    double feedVyaw;
-};
-
-struct PID {
-    double ref;
-    double fdb;
-    double err;
-    double kp;
-    double up;
-    double up1;
-    double ui;
-    double ud;
-    double outPreSat;
-    double outMax;
-    double outMin;
-    double out;
-    double satErr;
-    double ki;
-    double kc;
-    double kd;
-};
-
-struct PIDs {
-    PID px;
-    PID py;
-    PID yaw;
-};
-
-struct ProfileJoint {
-    double initPos;
-    double finalPos;
-    double lengthPos;
-    double outputPos;
-    double initVel;
-    double finalVel;
-    double lengthVel;
-    double outputVel;
-    double maxVel;
-    double comdVel;
-    double maxAccel;
-    double designAccel;
-    double ts;
-    double t;
-    double tCounter;
-    uint64_t startFlag;
-    double vIn;
-    double aIn;
-    double tIn;
-};
-
-struct ProfileJoints {
-    ProfileJoint px;
-    ProfileJoint py;
-    ProfileJoint yaw;
+// 상세메시지정보
+struct CustomString {
+#define SUBJECT_SIZE    16
+    unsigned char subject[SUBJECT_SIZE];
+    double value;
 };
 
 #pragma pack(push, 1)
 struct WhisperState {
-    AGVOdometry agvOdometry;
-    LBox lBox;
-    PIDs pids;
-    ProfileJoints profileJoints;
-};
-#pragma pack(pop)
-
-// 상세메시지정보
-struct CustomString {
-#define SUBJECT_SIZE    8
-    unsigned char subject[SUBJECT_SIZE];
-    int64_t val_i64;
-    double val_dbl;
-};
-
-#pragma pack(push, 1)
-struct CustomStringState {
-    CustomString val0;
-    CustomString val1;
-    CustomString val2;
-    CustomString val3;
-    CustomString val4;
-    CustomString val5;
-    CustomString val6;
-    CustomString val7;
-    CustomString val8;
-    CustomString val9;
+    CustomString val00;
+    CustomString val01;
+    CustomString val02;
+    CustomString val03;
+    CustomString val04;
+    CustomString val05;
+    CustomString val06;
+    CustomString val07;
+    CustomString val08;
+    CustomString val09;
+    CustomString val10;
+    CustomString val11;
+    CustomString val12;
+    CustomString val13;
+    CustomString val14;
+    CustomString val15;
+    CustomString val16;
+    CustomString val17;
+    CustomString val18;
+    CustomString val19;
 };
 #pragma pack(pop)
 
@@ -238,8 +134,7 @@ typedef enum _Command {
 	StartPosControl=10,
 	GetTotal=11, GetPlatform, GetSensor, GetPos,
 	InitPlatform=15,
-    GetWhisper=16,
-    GetCustomString=17
+    GetWhisper=16
 } Command;
 
 SensorState sensorStateOut;
@@ -247,14 +142,12 @@ PosState posStateOut;
 PlatformState platformStateOut;
 TotalState totalStateOut;
 WhisperState whisperStateOut;
-CustomStringState customStringStateOut;
 
 StateInfo totalState;
 StateInfo platformState;
 StateInfo sensorState;
 StateInfo posState;
 StateInfo whisperState;
-StateInfo customStringState;
 
 int sock, client_sock;
 
@@ -284,11 +177,6 @@ void chatOutCallBack(const chatterbox::ChatOut chatOut) {
 chatterbox::WhisperOut whisperOut_;
 void whisperOutCallBack(const chatterbox::WhisperOut whisperOut) {
     whisperOut_ = whisperOut;
-}
-
-chatterbox::CustomStringOut customStringOut_;
-void customStringOutCallBack(const chatterbox::CustomStringOut customStringOut) {
-    customStringOut_ = customStringOut;
 }
 
 void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
@@ -699,22 +587,19 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                             if (totalState.period == 0) {
                             // 전체 송신할 바이트 계산
-                                #if TCP_DUMMY_SEND
+                                #if TCP_DUMMY_SEND                                
+                                totalStateOut.sensor.front += 1;
+                                totalStateOut.sensor.back += 2;
+                                totalStateOut.sensor.right_front += 3;
+                                totalStateOut.sensor.right_back += 4;
+
+                                totalStateOut.pos.x += 5;
+                                totalStateOut.pos.y += 6;
+                                totalStateOut.pos.z += 7;
+
                                 totalStateOut.platform.state += 8;
                                 totalStateOut.platform.mode += 9;
-                                
-                                totalStateOut.sensor.front += 0.1;
-                                totalStateOut.sensor.back += 0.2;
-                                totalStateOut.sensor.right_front += 0.3;
-                                totalStateOut.sensor.right_back += 0.4;
-
-                                totalStateOut.pos.x += 0.5;
-                                totalStateOut.pos.y += 0.6;
-                                totalStateOut.pos.z += 0.7;
                                 #else
-                                totalStateOut.platform.state = chatOut_.platformState.state; 
-                                totalStateOut.platform.mode = chatOut_.platformState.mode;
-
                                 totalStateOut.sensor.front = chatOut_.sensorState.front;
                                 totalStateOut.sensor.back = chatOut_.sensorState.back;
                                 totalStateOut.sensor.right_front = chatOut_.sensorState.right_front;
@@ -723,6 +608,9 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 totalStateOut.pos.x = chatOut_.posState.x;
                                 totalStateOut.pos.y = chatOut_.posState.y;
                                 totalStateOut.pos.z = chatOut_.posState.z;
+
+                                totalStateOut.platform.state = chatOut_.platformState.state; 
+                                totalStateOut.platform.mode = chatOut_.platformState.mode;
                                 #endif
 
                                 #if 0
@@ -755,8 +643,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             if (platformState.period == 0) {
                                 // 전체 송신할 바이트 계산
                                 #if TCP_DUMMY_SEND
-                                platformStateOut.state += 2;
-                                platformStateOut.mode += 3;
+                                platformStateOut.state += 1;
+                                platformStateOut.mode += 2;
                                 #else
                                 platformStateOut.state = chatOut_.platformState.state; 
                                 platformStateOut.mode = chatOut_.platformState.mode;
@@ -792,10 +680,10 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             if (sensorState.period == 0) {
                                 // 전체 송신할 바이트 계산
                                 #if TCP_DUMMY_SEND
-                                sensorStateOut.front += 0.1;
-                                sensorStateOut.back += 0.2;
-                                sensorStateOut.right_front += 0.3;
-                                sensorStateOut.right_back += 0.4;
+                                sensorStateOut.front += 1;
+                                sensorStateOut.back += 2;
+                                sensorStateOut.right_front += 3;
+                                sensorStateOut.right_back += 4;
                                 #else
                                 sensorStateOut.front = chatOut_.sensorState.front;
                                 sensorStateOut.back = chatOut_.sensorState.back;
@@ -833,9 +721,9 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             if (posState.period == 0) {
                                 // 전체 송신할 바이트 계산
                                 #if TCP_DUMMY_SEND
-                                posStateOut.x += 0.1;
-                                posStateOut.y += 0.2;
-                                posStateOut.z += 0.3;
+                                posStateOut.x += 1;
+                                posStateOut.y += 2;
+                                posStateOut.z += 3;
                                 #else
                                 posStateOut.x = chatOut_.posState.x;
                                 posStateOut.y = chatOut_.posState.y;
@@ -883,31 +771,75 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             if (whisperState.period == 0) {
                                 // 전체 송신할 바이트 계산
                                 #if TCP_DUMMY_SEND
-                                whisperStateOut.agvOdometry.tfSensor.x1 += 0.1;
-                                whisperStateOut.agvOdometry.odomWheel.x += 0.2;
-                                whisperStateOut.agvOdometry.odomImu.x += 0.3;
-                                whisperStateOut.agvOdometry.odom1AxisLidar.x += 0.4;
-                                whisperStateOut.lBox.comdPx += 0.5;
-                                whisperStateOut.pids.px.ref += 0.6;
-                                whisperStateOut.pids.py.ref += 0.7;
-                                whisperStateOut.pids.yaw.ref += 0.8;
-                                whisperStateOut.profileJoints.px.initPos += 0.9;
-                                whisperStateOut.profileJoints.py.initPos += 0.1;
-                                whisperStateOut.profileJoints.yaw.initPos += 0.2;
-                                whisperStateOut.profileJoints.yaw.tIn += 0.3;
+                                whisperOut_.val00.subject = "val00val00val00val00";
+                                memset(whisperStateOut.val00.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val00.subject, whisperOut_.val00.subject.c_str(), whisperOut_.val00.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val00.subject.length());
+                                whisperStateOut.val00.value += 1;
+                                whisperOut_.val19.subject = "val19val19val19val19";
+                                memset(whisperStateOut.val19.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val19.subject, whisperOut_.val19.subject.c_str(), whisperOut_.val19.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val19.subject.length());
+                                whisperStateOut.val19.value += 2;
                                 #else
-                                whisperStateOut.agvOdometry.tfSensor.x1 = whisperOut_.agvOdometry.tfSensor.x1;
-                                whisperStateOut.agvOdometry.odomWheel.x = whisperOut_.agvOdometry.odomWheel.x;
-                                whisperStateOut.agvOdometry.odomImu.x = whisperOut_.agvOdometry.odomImu.x;
-                                whisperStateOut.agvOdometry.odom1AxisLidar.x = whisperOut_.agvOdometry.odom1AxisLidar.x;
-                                whisperStateOut.lBox.comdPx = whisperOut_.lBox.comdPx;
-                                whisperStateOut.pids.px.ref = whisperOut_.pids.px.ref;
-                                whisperStateOut.pids.py.ref = whisperOut_.pids.py.ref;
-                                whisperStateOut.pids.yaw.ref = whisperOut_.pids.yaw.ref;
-                                whisperStateOut.profileJoints.px.initPos = whisperOut_.profileJoints.px.initPos;
-                                whisperStateOut.profileJoints.py.initPos = whisperOut_.profileJoints.py.initPos;
-                                whisperStateOut.profileJoints.yaw.initPos = whisperOut_.profileJoints.yaw.initPos;
-                                whisperStateOut.profileJoints.yaw.tIn = whisperOut_.profileJoints.yaw.tIn;
+                                memset(whisperStateOut.val00.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val00.subject, whisperOut_.val00.subject.c_str(), whisperOut_.val00.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val00.subject.length());
+                                whisperStateOut.val00.value = whisperOut_.val00.value;                
+                                memset(whisperStateOut.val01.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val01.subject, whisperOut_.val01.subject.c_str(), whisperOut_.val01.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val01.subject.length());
+                                whisperStateOut.val01.value = whisperOut_.val01.value;                
+                                memset(whisperStateOut.val02.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val02.subject, whisperOut_.val02.subject.c_str(), whisperOut_.val02.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val02.subject.length());
+                                whisperStateOut.val02.value = whisperOut_.val02.value;                
+                                memset(whisperStateOut.val03.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val03.subject, whisperOut_.val03.subject.c_str(), whisperOut_.val03.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val03.subject.length());
+                                whisperStateOut.val03.value = whisperOut_.val03.value;                
+                                memset(whisperStateOut.val04.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val04.subject, whisperOut_.val04.subject.c_str(), whisperOut_.val04.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val04.subject.length());
+                                whisperStateOut.val04.value = whisperOut_.val04.value;                
+                                memset(whisperStateOut.val05.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val05.subject, whisperOut_.val05.subject.c_str(), whisperOut_.val05.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val05.subject.length());
+                                whisperStateOut.val05.value = whisperOut_.val05.value;                
+                                memset(whisperStateOut.val06.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val06.subject, whisperOut_.val06.subject.c_str(), whisperOut_.val06.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val06.subject.length());
+                                whisperStateOut.val06.value = whisperOut_.val06.value;                
+                                memset(whisperStateOut.val07.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val07.subject, whisperOut_.val07.subject.c_str(), whisperOut_.val07.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val07.subject.length());
+                                whisperStateOut.val07.value = whisperOut_.val07.value;                
+                                memset(whisperStateOut.val08.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val08.subject, whisperOut_.val08.subject.c_str(), whisperOut_.val08.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val08.subject.length());
+                                whisperStateOut.val08.value = whisperOut_.val08.value;                
+                                memset(whisperStateOut.val09.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val09.subject, whisperOut_.val09.subject.c_str(), whisperOut_.val09.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val09.subject.length());
+                                whisperStateOut.val09.value = whisperOut_.val09.value;                
+                                memset(whisperStateOut.val10.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val10.subject, whisperOut_.val10.subject.c_str(), whisperOut_.val10.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val10.subject.length());
+                                whisperStateOut.val10.value = whisperOut_.val10.value;                
+                                memset(whisperStateOut.val11.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val11.subject, whisperOut_.val11.subject.c_str(), whisperOut_.val11.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val11.subject.length());
+                                whisperStateOut.val11.value = whisperOut_.val11.value;                
+                                memset(whisperStateOut.val12.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val12.subject, whisperOut_.val12.subject.c_str(), whisperOut_.val12.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val12.subject.length());
+                                whisperStateOut.val12.value = whisperOut_.val12.value;                
+                                memset(whisperStateOut.val13.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val13.subject, whisperOut_.val13.subject.c_str(), whisperOut_.val13.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val13.subject.length());
+                                whisperStateOut.val13.value = whisperOut_.val13.value;                
+                                memset(whisperStateOut.val14.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val14.subject, whisperOut_.val14.subject.c_str(), whisperOut_.val14.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val14.subject.length());
+                                whisperStateOut.val14.value = whisperOut_.val14.value;                
+                                memset(whisperStateOut.val15.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val15.subject, whisperOut_.val15.subject.c_str(), whisperOut_.val15.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val15.subject.length());
+                                whisperStateOut.val15.value = whisperOut_.val15.value;                
+                                memset(whisperStateOut.val16.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val16.subject, whisperOut_.val16.subject.c_str(), whisperOut_.val16.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val16.subject.length());
+                                whisperStateOut.val16.value = whisperOut_.val16.value;                
+                                memset(whisperStateOut.val17.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val17.subject, whisperOut_.val17.subject.c_str(), whisperOut_.val17.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val17.subject.length());
+                                whisperStateOut.val17.value = whisperOut_.val17.value;                
+                                memset(whisperStateOut.val18.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val18.subject, whisperOut_.val18.subject.c_str(), whisperOut_.val18.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val18.subject.length());
+                                whisperStateOut.val18.value = whisperOut_.val18.value;                
+                                memset(whisperStateOut.val19.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val19.subject, whisperOut_.val19.subject.c_str(), whisperOut_.val19.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val19.subject.length());
+                                whisperStateOut.val19.value = whisperOut_.val19.value;
                                 #endif
 
                                 #if 0
@@ -921,40 +853,6 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(whisperStateOut));
                                 buffer[ACK_IDX] = ACK_ONE;
                                 send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(whisperStateOut), 0);
-                                #endif
-                            } else {
-                            }
-                        break;
-                        case GetCustomString:
-                            printf("Receviced GetCustomString, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            memcpy(&customStringState, buffer+COMMAND_SIZE, sizeof(StateInfo));
-                            printf("period: %d\n", customStringState.period);
-
-                            if (customStringState.period == 0) {
-                                // 전체 송신할 바이트 계산
-                                #if TCP_DUMMY_SEND
-                                #else
-                                memset(customStringStateOut.val0.subject, '\0', SUBJECT_SIZE);
-                                memcpy(customStringStateOut.val0.subject, customStringOut_.val0.subject.c_str(), customStringOut_.val0.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:customStringOut_.val0.subject.length());
-                                customStringStateOut.val0.val_i64 = customStringOut_.val0.value_i64;
-                                customStringStateOut.val0.val_dbl = customStringOut_.val0.value_dbl;
-                                memset(customStringStateOut.val9.subject, '\0', SUBJECT_SIZE);
-                                memcpy(customStringStateOut.val9.subject, customStringOut_.val9.subject.c_str(), customStringOut_.val9.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:customStringOut_.val9.subject.length());
-                                customStringStateOut.val9.val_i64 = customStringOut_.val9.value_i64;
-                                customStringStateOut.val9.val_dbl = customStringOut_.val9.value_dbl;
-                                #endif
-
-                                #if 0
-                                #else							
-                                byte_size = sizeof(command) + sizeof(customStringStateOut);
-                                u8_ptr = (char*)&byte_size;
-                                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                                u8_ptr = (char*)&command;
-                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                                u8_ptr = (char*)&customStringStateOut;
-                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(customStringStateOut));
-                                buffer[ACK_IDX] = ACK_ONE;
-                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(customStringStateOut), 0);
                                 #endif
                             } else {
                             }
@@ -1039,22 +937,19 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 ts_total = ts_now;
 
                 // 전체 송신할 바이트 계산
-                #if TCP_DUMMY_SEND
+                #if TCP_DUMMY_SEND                                
+                totalStateOut.sensor.front += 1;
+                totalStateOut.sensor.back += 2;
+                totalStateOut.sensor.right_front += 3;
+                totalStateOut.sensor.right_back += 4;
+
+                totalStateOut.pos.x += 5;
+                totalStateOut.pos.y += 6;
+                totalStateOut.pos.z += 7;
+
                 totalStateOut.platform.state += 8;
                 totalStateOut.platform.mode += 9;
-                
-                totalStateOut.sensor.front += 0.1;
-                totalStateOut.sensor.back += 0.2;
-                totalStateOut.sensor.right_front += 0.3;
-                totalStateOut.sensor.right_back += 0.4;
-
-                totalStateOut.pos.x += 0.5;
-                totalStateOut.pos.y += 0.6;
-                totalStateOut.pos.z += 0.7;
                 #else
-                totalStateOut.platform.state = chatOut_.platformState.state; 
-                totalStateOut.platform.mode = chatOut_.platformState.mode;
-
                 totalStateOut.sensor.front = chatOut_.sensorState.front;
                 totalStateOut.sensor.back = chatOut_.sensorState.back;
                 totalStateOut.sensor.right_front = chatOut_.sensorState.right_front;
@@ -1063,6 +958,9 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 totalStateOut.pos.x = chatOut_.posState.x;
                 totalStateOut.pos.y = chatOut_.posState.y;
                 totalStateOut.pos.z = chatOut_.posState.z;
+
+                totalStateOut.platform.state = chatOut_.platformState.state; 
+                totalStateOut.platform.mode = chatOut_.platformState.mode;
                 #endif
 
                 command = GetTotal;
@@ -1083,8 +981,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                 // 전체 송신할 바이트 계산
                 #if TCP_DUMMY_SEND
-                platformStateOut.state += 2;
-                platformStateOut.mode += 3;
+                platformStateOut.state += 1;
+                platformStateOut.mode += 2;
                 #else
                 platformStateOut.state = chatOut_.platformState.state; 
                 platformStateOut.mode = chatOut_.platformState.mode;
@@ -1108,10 +1006,10 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                 // 전체 송신할 바이트 계산
                 #if TCP_DUMMY_SEND
-                sensorStateOut.front += 0.1;
-                sensorStateOut.back += 0.2;
-                sensorStateOut.right_front += 0.3;
-                sensorStateOut.right_back += 0.4;
+                sensorStateOut.front += 1;
+                sensorStateOut.back += 2;
+                sensorStateOut.right_front += 3;
+                sensorStateOut.right_back += 4;
                 #else
                 sensorStateOut.front = chatOut_.sensorState.front;
                 sensorStateOut.back = chatOut_.sensorState.back;
@@ -1137,9 +1035,9 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                 // 전체 송신할 바이트 계산
                 #if TCP_DUMMY_SEND
-                posStateOut.x += 0.1;
-                posStateOut.y += 0.2;
-                posStateOut.z += 0.3;
+                posStateOut.x += 1;
+                posStateOut.y += 2;
+                posStateOut.z += 3;
                 #else
                 posStateOut.x = chatOut_.posState.x;
                 posStateOut.y = chatOut_.posState.y;
@@ -1164,77 +1062,75 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                 // 전체 송신할 바이트 계산
                 #if TCP_DUMMY_SEND
-                whisperStateOut.agvOdometry.tfSensor.x1 += 0.1;
-                whisperStateOut.agvOdometry.odomWheel.x += 0.2;
-                whisperStateOut.agvOdometry.odomImu.x += 0.3;
-                whisperStateOut.agvOdometry.odom1AxisLidar.x += 0.4;
-                whisperStateOut.lBox.comdPx += 0.5;
-                whisperStateOut.pids.px.ref += 0.6;
-                whisperStateOut.pids.py.ref += 0.7;
-                whisperStateOut.pids.yaw.ref += 0.8;
-                whisperStateOut.profileJoints.px.initPos += 0.9;
-                whisperStateOut.profileJoints.py.initPos += 0.1;
-                whisperStateOut.profileJoints.yaw.initPos += 0.2;
-                whisperStateOut.profileJoints.yaw.tIn += 0.3;
+                whisperOut_.val00.subject = "val00val00val00val00";
+                memset(whisperStateOut.val00.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val00.subject, whisperOut_.val00.subject.c_str(), whisperOut_.val00.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val00.subject.length());
+                whisperStateOut.val00.value += 1;
+                whisperOut_.val19.subject = "val19val19val19val19";
+                memset(whisperStateOut.val19.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val19.subject, whisperOut_.val19.subject.c_str(), whisperOut_.val19.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val19.subject.length());
+                whisperStateOut.val19.value += 2;
                 #else
-                whisperStateOut.agvOdometry.tfSensor.x1 = whisperOut_.agvOdometry.tfSensor.x1;
-                whisperStateOut.agvOdometry.odomWheel.x = whisperOut_.agvOdometry.odomWheel.x;
-                whisperStateOut.agvOdometry.odomImu.x = whisperOut_.agvOdometry.odomImu.x;
-                whisperStateOut.agvOdometry.odom1AxisLidar.x = whisperOut_.agvOdometry.odom1AxisLidar.x;
-                whisperStateOut.lBox.comdPx = whisperOut_.lBox.comdPx;
-                whisperStateOut.pids.px.ref = whisperOut_.pids.px.ref;
-                whisperStateOut.pids.py.ref = whisperOut_.pids.py.ref;
-                whisperStateOut.pids.yaw.ref = whisperOut_.pids.yaw.ref;
-                whisperStateOut.profileJoints.px.initPos = whisperOut_.profileJoints.px.initPos;
-                whisperStateOut.profileJoints.py.initPos = whisperOut_.profileJoints.py.initPos;
-                whisperStateOut.profileJoints.yaw.initPos = whisperOut_.profileJoints.yaw.initPos;
-                whisperStateOut.profileJoints.yaw.tIn = whisperOut_.profileJoints.yaw.tIn;
-                #endif
-
-                command = GetWhisper;
-                	
-                byte_size = sizeof(command) + sizeof(whisperStateOut);
-                u8_ptr = (char*)&byte_size;
-                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                u8_ptr = (char*)&command;
-                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                u8_ptr = (char*)&whisperStateOut;
-                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(whisperStateOut));
-                buffer[ACK_IDX] = ACK_STR;
-                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(whisperStateOut), 0);
-            }
-        
-            
-            if (whisperState.period !=0 && whisperState.period <= (ts_now-ts_whisper)) {
-                ts_whisper = ts_now;
-
-                // 전체 송신할 바이트 계산
-                #if TCP_DUMMY_SEND
-                whisperStateOut.agvOdometry.tfSensor.x1 += 0.1;
-                whisperStateOut.agvOdometry.odomWheel.x += 0.2;
-                whisperStateOut.agvOdometry.odomImu.x += 0.3;
-                whisperStateOut.agvOdometry.odom1AxisLidar.x += 0.4;
-                whisperStateOut.lBox.comdPx += 0.5;
-                whisperStateOut.pids.px.ref += 0.6;
-                whisperStateOut.pids.py.ref += 0.7;
-                whisperStateOut.pids.yaw.ref += 0.8;
-                whisperStateOut.profileJoints.px.initPos += 0.9;
-                whisperStateOut.profileJoints.py.initPos += 0.1;
-                whisperStateOut.profileJoints.yaw.initPos += 0.2;
-                whisperStateOut.profileJoints.yaw.tIn += 0.3;
-                #else
-                whisperStateOut.agvOdometry.tfSensor.x1 = whisperOut_.agvOdometry.tfSensor.x1;
-                whisperStateOut.agvOdometry.odomWheel.x = whisperOut_.agvOdometry.odomWheel.x;
-                whisperStateOut.agvOdometry.odomImu.x = whisperOut_.agvOdometry.odomImu.x;
-                whisperStateOut.agvOdometry.odom1AxisLidar.x = whisperOut_.agvOdometry.odom1AxisLidar.x;
-                whisperStateOut.lBox.comdPx = whisperOut_.lBox.comdPx;
-                whisperStateOut.pids.px.ref = whisperOut_.pids.px.ref;
-                whisperStateOut.pids.py.ref = whisperOut_.pids.py.ref;
-                whisperStateOut.pids.yaw.ref = whisperOut_.pids.yaw.ref;
-                whisperStateOut.profileJoints.px.initPos = whisperOut_.profileJoints.px.initPos;
-                whisperStateOut.profileJoints.py.initPos = whisperOut_.profileJoints.py.initPos;
-                whisperStateOut.profileJoints.yaw.initPos = whisperOut_.profileJoints.yaw.initPos;
-                whisperStateOut.profileJoints.yaw.tIn = whisperOut_.profileJoints.yaw.tIn;
+                memset(whisperStateOut.val00.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val00.subject, whisperOut_.val00.subject.c_str(), whisperOut_.val00.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val00.subject.length());
+                whisperStateOut.val00.value = whisperOut_.val00.value;                
+                memset(whisperStateOut.val01.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val01.subject, whisperOut_.val01.subject.c_str(), whisperOut_.val01.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val01.subject.length());
+                whisperStateOut.val01.value = whisperOut_.val01.value;                
+                memset(whisperStateOut.val02.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val02.subject, whisperOut_.val02.subject.c_str(), whisperOut_.val02.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val02.subject.length());
+                whisperStateOut.val02.value = whisperOut_.val02.value;                
+                memset(whisperStateOut.val03.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val03.subject, whisperOut_.val03.subject.c_str(), whisperOut_.val03.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val03.subject.length());
+                whisperStateOut.val03.value = whisperOut_.val03.value;                
+                memset(whisperStateOut.val04.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val04.subject, whisperOut_.val04.subject.c_str(), whisperOut_.val04.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val04.subject.length());
+                whisperStateOut.val04.value = whisperOut_.val04.value;                
+                memset(whisperStateOut.val05.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val05.subject, whisperOut_.val05.subject.c_str(), whisperOut_.val05.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val05.subject.length());
+                whisperStateOut.val05.value = whisperOut_.val05.value;                
+                memset(whisperStateOut.val06.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val06.subject, whisperOut_.val06.subject.c_str(), whisperOut_.val06.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val06.subject.length());
+                whisperStateOut.val06.value = whisperOut_.val06.value;                
+                memset(whisperStateOut.val07.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val07.subject, whisperOut_.val07.subject.c_str(), whisperOut_.val07.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val07.subject.length());
+                whisperStateOut.val07.value = whisperOut_.val07.value;                
+                memset(whisperStateOut.val08.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val08.subject, whisperOut_.val08.subject.c_str(), whisperOut_.val08.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val08.subject.length());
+                whisperStateOut.val08.value = whisperOut_.val08.value;                
+                memset(whisperStateOut.val09.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val09.subject, whisperOut_.val09.subject.c_str(), whisperOut_.val09.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val09.subject.length());
+                whisperStateOut.val09.value = whisperOut_.val09.value;                
+                memset(whisperStateOut.val10.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val10.subject, whisperOut_.val10.subject.c_str(), whisperOut_.val10.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val10.subject.length());
+                whisperStateOut.val10.value = whisperOut_.val10.value;                
+                memset(whisperStateOut.val11.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val11.subject, whisperOut_.val11.subject.c_str(), whisperOut_.val11.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val11.subject.length());
+                whisperStateOut.val11.value = whisperOut_.val11.value;                
+                memset(whisperStateOut.val12.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val12.subject, whisperOut_.val12.subject.c_str(), whisperOut_.val12.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val12.subject.length());
+                whisperStateOut.val12.value = whisperOut_.val12.value;                
+                memset(whisperStateOut.val13.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val13.subject, whisperOut_.val13.subject.c_str(), whisperOut_.val13.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val13.subject.length());
+                whisperStateOut.val13.value = whisperOut_.val13.value;                
+                memset(whisperStateOut.val14.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val14.subject, whisperOut_.val14.subject.c_str(), whisperOut_.val14.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val14.subject.length());
+                whisperStateOut.val14.value = whisperOut_.val14.value;                
+                memset(whisperStateOut.val15.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val15.subject, whisperOut_.val15.subject.c_str(), whisperOut_.val15.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val15.subject.length());
+                whisperStateOut.val15.value = whisperOut_.val15.value;                
+                memset(whisperStateOut.val16.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val16.subject, whisperOut_.val16.subject.c_str(), whisperOut_.val16.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val16.subject.length());
+                whisperStateOut.val16.value = whisperOut_.val16.value;                
+                memset(whisperStateOut.val17.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val17.subject, whisperOut_.val17.subject.c_str(), whisperOut_.val17.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val17.subject.length());
+                whisperStateOut.val17.value = whisperOut_.val17.value;                
+                memset(whisperStateOut.val18.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val18.subject, whisperOut_.val18.subject.c_str(), whisperOut_.val18.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val18.subject.length());
+                whisperStateOut.val18.value = whisperOut_.val18.value;                
+                memset(whisperStateOut.val19.subject, '\0', SUBJECT_SIZE);
+                memcpy(whisperStateOut.val19.subject, whisperOut_.val19.subject.c_str(), whisperOut_.val19.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val19.subject.length());
+                whisperStateOut.val19.value = whisperOut_.val19.value;
                 #endif
 
                 command = GetWhisper;
@@ -1272,11 +1168,8 @@ int main(int argc, char** argv)
     
     ros::Subscriber chatOut_sub = nh.subscribe("/chatterbox/chatOut_topic", 100, chatOutCallBack);
     ros::Subscriber whisperOut_sub = nh.subscribe("/chatterbox/whisperOut_topic", 100, whisperOutCallBack);
-    // ros::Subscriber customStringOut_sub = nh.subscribe("/chatterbox/customStringOut_topic", 100, customStringOutCallBack);
-    ros::Subscriber customStringOut_sub = nh.subscribe("customStringOut_topic", 100, customStringOutCallBack);
     
     ros::Publisher chatIn_pub = nh.advertise<chatterbox::ChatIn>("chatIn_topic", 100);
-    ros::Publisher customStringOut_pub = nh.advertise<chatterbox::CustomStringOut>("customStringOut_topic", 100);
 
     int thread_rate = 200;
     boost::thread hThread(fThread, &thread_rate, &chatIn_pub);
@@ -1287,24 +1180,13 @@ int main(int argc, char** argv)
     double time_pre = time_cur;
     double time_diff;
 
-    chatterbox::CustomStringOut customStringOut;
-
     while(ros::ok())
     {
         time_cur = ros::Time::now().toSec();
         time_diff = time_cur - time_pre;
-// #define PERIOD  0.1
 #define PERIOD  0.1
         if ( time_diff > PERIOD) {
             time_pre = time_cur;
-            customStringOut.header.stamp = ros::Time::now();
-            customStringOut.val0.subject = "val0";
-            customStringOut.val0.value_i64 += 1;
-            customStringOut.val0.value_dbl += 2;
-            customStringOut.val9.subject = "val9val9val9val9";
-            customStringOut.val9.value_i64 += 3;
-            customStringOut.val9.value_dbl += 4;
-            customStringOut_pub.publish(customStringOut);
         }
 
         ros::spinOnce();

@@ -1,9 +1,0 @@
-float64 x1
-float64 y1
-float64 x2
-float64 theta
-float64 theta_deg
-float64 dl1
-float64 dl2
-float64 dl3
-float64 dl4
