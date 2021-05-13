@@ -1,0 +1,7 @@
+<launch>
+	<include file="$(find chatterbox)/launch/base.launch">
+		<arg name="tcp_port" value="10100"/>
+	</include>
+
+	<include file="$(find chatterbox)/launch/client.launch" />
+</launch>

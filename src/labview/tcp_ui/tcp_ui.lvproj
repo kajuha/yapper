@@ -22,6 +22,7 @@
 		<Item Name="testVI" Type="Folder" URL="../testVI">
 			<Property Name="NI.DISK" Type="Bool">true</Property>
 		</Item>
+		<Item Name="clusterCustomString.ctl" Type="VI" URL="../control/clusterCustomString.ctl"/>
 		<Item Name="Dependencies" Type="Dependencies">
 			<Item Name="vi.lib" Type="Folder">
 				<Item Name="Clear Errors.vi" Type="VI" URL="/&lt;vilib&gt;/Utility/error.llb/Clear Errors.vi"/>

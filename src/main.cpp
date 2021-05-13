@@ -8,6 +8,7 @@
 #include "chatterbox/ChatIn.h"
 #include "chatterbox/ChatOut.h"
 #include "chatterbox/WhisperOut.h"
+#include "chatterbox/CustomStringOut.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -22,6 +23,10 @@
 #include <iostream>
 #include <sys/time.h>
 #include <ctime>
+
+#define ON                  1
+#define OFF                 0
+#define TCP_DUMMY_SEND      OFF
 
 // 플랫폼 위치 파라미터
 typedef struct _PosState {
@@ -87,7 +92,7 @@ typedef struct _TotalState {
 } TotalState;
 #pragma pack(pop)
 
-// 상세 메시지 출력용 시작
+// 상세 메시지 정보
 struct TFSensor {
     double x1;
     double y1;
@@ -199,7 +204,28 @@ struct WhisperState {
 };
 #pragma pack(pop)
 
-// 상세 메시지 출력용 끝
+// 상세메시지정보
+struct CustomString {
+#define SUBJECT_SIZE    8
+    unsigned char subject[SUBJECT_SIZE];
+    int64_t val_i64;
+    double val_dbl;
+};
+
+#pragma pack(push, 1)
+struct CustomStringState {
+    CustomString val0;
+    CustomString val1;
+    CustomString val2;
+    CustomString val3;
+    CustomString val4;
+    CustomString val5;
+    CustomString val6;
+    CustomString val7;
+    CustomString val8;
+    CustomString val9;
+};
+#pragma pack(pop)
 
 // 명령어 종류
 typedef enum _Command {
@@ -212,7 +238,8 @@ typedef enum _Command {
 	StartPosControl=10,
 	GetTotal=11, GetPlatform, GetSensor, GetPos,
 	InitPlatform=15,
-    GetWhisper=16
+    GetWhisper=16,
+    GetCustomString=17
 } Command;
 
 SensorState sensorStateOut;
@@ -220,12 +247,14 @@ PosState posStateOut;
 PlatformState platformStateOut;
 TotalState totalStateOut;
 WhisperState whisperStateOut;
+CustomStringState customStringStateOut;
 
 StateInfo totalState;
 StateInfo platformState;
 StateInfo sensorState;
 StateInfo posState;
 StateInfo whisperState;
+StateInfo customStringState;
 
 int sock, client_sock;
 
@@ -255,6 +284,11 @@ void chatOutCallBack(const chatterbox::ChatOut chatOut) {
 chatterbox::WhisperOut whisperOut_;
 void whisperOutCallBack(const chatterbox::WhisperOut whisperOut) {
     whisperOut_ = whisperOut;
+}
+
+chatterbox::CustomStringOut customStringOut_;
+void customStringOutCallBack(const chatterbox::CustomStringOut customStringOut) {
+    customStringOut_ = customStringOut;
 }
 
 void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
@@ -665,49 +699,51 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                             if (totalState.period == 0) {
                             // 전체 송신할 바이트 계산
-                            #if 0
-                            totalStateOut.sensor.front += 0.1;
-                            totalStateOut.sensor.back += 0.2;
-                            totalStateOut.sensor.right_front += 0.3;
-                            totalStateOut.sensor.right_back += 0.4;
-                            totalStateOut.pos.x += 0.5;
-                            totalStateOut.pos.y += 0.6;
-                            totalStateOut.pos.z += 0.7;
-                            totalStateOut.platform.state += 8;
-                            totalStateOut.platform.mode += 9;
-                            #else
-                            platformStateOut.state = chatOut_.platformState.state; 
-                            platformStateOut.mode = chatOut_.platformState.mode;
+                                #if TCP_DUMMY_SEND
+                                totalStateOut.platform.state += 8;
+                                totalStateOut.platform.mode += 9;
+                                
+                                totalStateOut.sensor.front += 0.1;
+                                totalStateOut.sensor.back += 0.2;
+                                totalStateOut.sensor.right_front += 0.3;
+                                totalStateOut.sensor.right_back += 0.4;
 
-                            sensorStateOut.front = chatOut_.sensorState.front;
-                            sensorStateOut.back = chatOut_.sensorState.back;
-                            sensorStateOut.right_front = chatOut_.sensorState.right_front;
-                            sensorStateOut.right_back = chatOut_.sensorState.right_back;
-                            
-                            posStateOut.x = chatOut_.posState.x;
-                            posStateOut.y = chatOut_.posState.y;
-                            posStateOut.z = chatOut_.posState.z;
-                            #endif
+                                totalStateOut.pos.x += 0.5;
+                                totalStateOut.pos.y += 0.6;
+                                totalStateOut.pos.z += 0.7;
+                                #else
+                                totalStateOut.platform.state = chatOut_.platformState.state; 
+                                totalStateOut.platform.mode = chatOut_.platformState.mode;
 
-                            #if 0
-                            byte_size = sizeof(command) + sizeof(totalStateOut);
-                            u8_ptr = (char*)&byte_size;
-                            send(client_sock, u8_ptr, sizeof(byte_size), 0);
-                            u8_ptr = (char*)&command;
-                            send(client_sock, u8_ptr, sizeof(command), 0);
-                            u8_ptr = (char*)&totalStateOut;
-                            send(client_sock, u8_ptr, sizeof(totalStateOut), 0);
-                            #else							
-                            byte_size = sizeof(command) + sizeof(totalStateOut);
-                            u8_ptr = (char*)&byte_size;
-                            memcpy(buffer, u8_ptr, sizeof(byte_size));
-                            u8_ptr = (char*)&command;
-                            memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                            u8_ptr = (char*)&totalStateOut;
-                            memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(totalStateOut));
-                            buffer[ACK_IDX] = ACK_ONE;
-                            send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(totalStateOut), 0);
-                            #endif
+                                totalStateOut.sensor.front = chatOut_.sensorState.front;
+                                totalStateOut.sensor.back = chatOut_.sensorState.back;
+                                totalStateOut.sensor.right_front = chatOut_.sensorState.right_front;
+                                totalStateOut.sensor.right_back = chatOut_.sensorState.right_back;
+                                
+                                totalStateOut.pos.x = chatOut_.posState.x;
+                                totalStateOut.pos.y = chatOut_.posState.y;
+                                totalStateOut.pos.z = chatOut_.posState.z;
+                                #endif
+
+                                #if 0
+                                byte_size = sizeof(command) + sizeof(totalStateOut);
+                                u8_ptr = (char*)&byte_size;
+                                send(client_sock, u8_ptr, sizeof(byte_size), 0);
+                                u8_ptr = (char*)&command;
+                                send(client_sock, u8_ptr, sizeof(command), 0);
+                                u8_ptr = (char*)&totalStateOut;
+                                send(client_sock, u8_ptr, sizeof(totalStateOut), 0);
+                                #else							
+                                byte_size = sizeof(command) + sizeof(totalStateOut);
+                                u8_ptr = (char*)&byte_size;
+                                memcpy(buffer, u8_ptr, sizeof(byte_size));
+                                u8_ptr = (char*)&command;
+                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
+                                u8_ptr = (char*)&totalStateOut;
+                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(totalStateOut));
+                                buffer[ACK_IDX] = ACK_ONE;
+                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(totalStateOut), 0);
+                                #endif
                             } else {
                             }
                         break;
@@ -717,34 +753,34 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             printf("period: %d\n", platformState.period);
 
                             if (platformState.period == 0) {
-                            // 전체 송신할 바이트 계산
-                            #if 0
-                            platformStateOut.state += 2;
-                            platformStateOut.mode += 3;
-                            #else
-                            platformStateOut.state = chatOut_.platformState.state; 
-                            platformStateOut.mode = chatOut_.platformState.mode;
-                            #endif
+                                // 전체 송신할 바이트 계산
+                                #if TCP_DUMMY_SEND
+                                platformStateOut.state += 2;
+                                platformStateOut.mode += 3;
+                                #else
+                                platformStateOut.state = chatOut_.platformState.state; 
+                                platformStateOut.mode = chatOut_.platformState.mode;
+                                #endif
 
-                            #if 0
-                            byte_size = sizeof(command) + sizeof(platformStateOut);
-                            u8_ptr = (char*)&byte_size;
-                            send(client_sock, u8_ptr, sizeof(byte_size), 0);
-                            u8_ptr = (char*)&command;
-                            send(client_sock, u8_ptr, sizeof(command), 0);
-                            u8_ptr = (char*)&platformStateOut;
-                            send(client_sock, u8_ptr, sizeof(platformStateOut), 0);
-                            #else							
-                            byte_size = sizeof(command) + sizeof(platformStateOut);
-                            u8_ptr = (char*)&byte_size;
-                            memcpy(buffer, u8_ptr, sizeof(byte_size));
-                            u8_ptr = (char*)&command;
-                            memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                            u8_ptr = (char*)&platformStateOut;
-                            memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(platformStateOut));
-                            buffer[ACK_IDX] = ACK_ONE;
-                            send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(platformStateOut), 0);
-                            #endif
+                                #if 0
+                                byte_size = sizeof(command) + sizeof(platformStateOut);
+                                u8_ptr = (char*)&byte_size;
+                                send(client_sock, u8_ptr, sizeof(byte_size), 0);
+                                u8_ptr = (char*)&command;
+                                send(client_sock, u8_ptr, sizeof(command), 0);
+                                u8_ptr = (char*)&platformStateOut;
+                                send(client_sock, u8_ptr, sizeof(platformStateOut), 0);
+                                #else							
+                                byte_size = sizeof(command) + sizeof(platformStateOut);
+                                u8_ptr = (char*)&byte_size;
+                                memcpy(buffer, u8_ptr, sizeof(byte_size));
+                                u8_ptr = (char*)&command;
+                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
+                                u8_ptr = (char*)&platformStateOut;
+                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(platformStateOut));
+                                buffer[ACK_IDX] = ACK_ONE;
+                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(platformStateOut), 0);
+                                #endif
                             } else {
                             }
                         break;
@@ -754,38 +790,38 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             printf("period: %d\n", sensorState.period);
 
                             if (sensorState.period == 0) {
-                            // 전체 송신할 바이트 계산
-                            #if 0
-                            sensorStateOut.front += 0.1;
-                            sensorStateOut.back += 0.2;
-                            sensorStateOut.right_front += 0.3;
-                            sensorStateOut.right_back += 0.4;
-                            #else
-                            sensorStateOut.front = chatOut_.sensorState.front;
-                            sensorStateOut.back = chatOut_.sensorState.back;
-                            sensorStateOut.right_front = chatOut_.sensorState.right_front;
-                            sensorStateOut.right_back = chatOut_.sensorState.right_back;
-                            #endif
+                                // 전체 송신할 바이트 계산
+                                #if TCP_DUMMY_SEND
+                                sensorStateOut.front += 0.1;
+                                sensorStateOut.back += 0.2;
+                                sensorStateOut.right_front += 0.3;
+                                sensorStateOut.right_back += 0.4;
+                                #else
+                                sensorStateOut.front = chatOut_.sensorState.front;
+                                sensorStateOut.back = chatOut_.sensorState.back;
+                                sensorStateOut.right_front = chatOut_.sensorState.right_front;
+                                sensorStateOut.right_back = chatOut_.sensorState.right_back;
+                                #endif
 
-                            #if 0
-                            byte_size = sizeof(command) + sizeof(sensorStateOut);
-                            u8_ptr = (char*)&byte_size;
-                            send(client_sock, u8_ptr, sizeof(byte_size), 0);
-                            u8_ptr = (char*)&command;
-                            send(client_sock, u8_ptr, sizeof(command), 0);
-                            u8_ptr = (char*)&sensorStateOut;
-                            send(client_sock, u8_ptr, sizeof(sensorStateOut), 0);
-                            #else							
-                            byte_size = sizeof(command) + sizeof(sensorStateOut);
-                            u8_ptr = (char*)&byte_size;
-                            memcpy(buffer, u8_ptr, sizeof(byte_size));
-                            u8_ptr = (char*)&command;
-                            memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                            u8_ptr = (char*)&sensorStateOut;
-                            memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(sensorStateOut));
-                            buffer[ACK_IDX] = ACK_ONE;
-                            send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(sensorStateOut), 0);
-                            #endif
+                                #if 0
+                                byte_size = sizeof(command) + sizeof(sensorStateOut);
+                                u8_ptr = (char*)&byte_size;
+                                send(client_sock, u8_ptr, sizeof(byte_size), 0);
+                                u8_ptr = (char*)&command;
+                                send(client_sock, u8_ptr, sizeof(command), 0);
+                                u8_ptr = (char*)&sensorStateOut;
+                                send(client_sock, u8_ptr, sizeof(sensorStateOut), 0);
+                                #else							
+                                byte_size = sizeof(command) + sizeof(sensorStateOut);
+                                u8_ptr = (char*)&byte_size;
+                                memcpy(buffer, u8_ptr, sizeof(byte_size));
+                                u8_ptr = (char*)&command;
+                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
+                                u8_ptr = (char*)&sensorStateOut;
+                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(sensorStateOut));
+                                buffer[ACK_IDX] = ACK_ONE;
+                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(sensorStateOut), 0);
+                                #endif
                             } else {
                             }
                         break;
@@ -795,36 +831,36 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             printf("period: %d\n", posState.period);
 
                             if (posState.period == 0) {
-                            // 전체 송신할 바이트 계산
-                            #if 0
-                            posStateOut.x += 0.1;
-                            posStateOut.y += 0.2;
-                            posStateOut.z += 0.3;
-                            #else
-                            posStateOut.x = chatOut_.posState.x;
-                            posStateOut.y = chatOut_.posState.y;
-                            posStateOut.z = chatOut_.posState.z;
-                            #endif
+                                // 전체 송신할 바이트 계산
+                                #if TCP_DUMMY_SEND
+                                posStateOut.x += 0.1;
+                                posStateOut.y += 0.2;
+                                posStateOut.z += 0.3;
+                                #else
+                                posStateOut.x = chatOut_.posState.x;
+                                posStateOut.y = chatOut_.posState.y;
+                                posStateOut.z = chatOut_.posState.z;
+                                #endif
 
-                            #if 0
-                            byte_size = sizeof(command) + sizeof(posStateOut);
-                            u8_ptr = (char*)&byte_size;
-                            send(client_sock, u8_ptr, sizeof(byte_size), 0);
-                            u8_ptr = (char*)&command;
-                            send(client_sock, u8_ptr, sizeof(command), 0);
-                            u8_ptr = (char*)&posStateOut;
-                            send(client_sock, u8_ptr, sizeof(posStateOut), 0);
-                            #else
-                            byte_size = sizeof(command) + sizeof(posStateOut);
-                            u8_ptr = (char*)&byte_size;
-                            memcpy(buffer, u8_ptr, sizeof(byte_size));
-                            u8_ptr = (char*)&command;
-                            memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                            u8_ptr = (char*)&posStateOut;
-                            memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(posStateOut));
-                            buffer[ACK_IDX] = ACK_ONE;
-                            send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(posStateOut), 0);
-                            #endif
+                                #if 0
+                                byte_size = sizeof(command) + sizeof(posStateOut);
+                                u8_ptr = (char*)&byte_size;
+                                send(client_sock, u8_ptr, sizeof(byte_size), 0);
+                                u8_ptr = (char*)&command;
+                                send(client_sock, u8_ptr, sizeof(command), 0);
+                                u8_ptr = (char*)&posStateOut;
+                                send(client_sock, u8_ptr, sizeof(posStateOut), 0);
+                                #else
+                                byte_size = sizeof(command) + sizeof(posStateOut);
+                                u8_ptr = (char*)&byte_size;
+                                memcpy(buffer, u8_ptr, sizeof(byte_size));
+                                u8_ptr = (char*)&command;
+                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
+                                u8_ptr = (char*)&posStateOut;
+                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(posStateOut));
+                                buffer[ACK_IDX] = ACK_ONE;
+                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(posStateOut), 0);
+                                #endif
                             } else {
                             }
                         break;
@@ -846,7 +882,19 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                             if (whisperState.period == 0) {
                                 // 전체 송신할 바이트 계산
-                                #if 0
+                                #if TCP_DUMMY_SEND
+                                whisperStateOut.agvOdometry.tfSensor.x1 += 0.1;
+                                whisperStateOut.agvOdometry.odomWheel.x += 0.2;
+                                whisperStateOut.agvOdometry.odomImu.x += 0.3;
+                                whisperStateOut.agvOdometry.odom1AxisLidar.x += 0.4;
+                                whisperStateOut.lBox.comdPx += 0.5;
+                                whisperStateOut.pids.px.ref += 0.6;
+                                whisperStateOut.pids.py.ref += 0.7;
+                                whisperStateOut.pids.yaw.ref += 0.8;
+                                whisperStateOut.profileJoints.px.initPos += 0.9;
+                                whisperStateOut.profileJoints.py.initPos += 0.1;
+                                whisperStateOut.profileJoints.yaw.initPos += 0.2;
+                                whisperStateOut.profileJoints.yaw.tIn += 0.3;
                                 #else
                                 whisperStateOut.agvOdometry.tfSensor.x1 = whisperOut_.agvOdometry.tfSensor.x1;
                                 whisperStateOut.agvOdometry.odomWheel.x = whisperOut_.agvOdometry.odomWheel.x;
@@ -873,6 +921,40 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(whisperStateOut));
                                 buffer[ACK_IDX] = ACK_ONE;
                                 send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(whisperStateOut), 0);
+                                #endif
+                            } else {
+                            }
+                        break;
+                        case GetCustomString:
+                            printf("Receviced GetCustomString, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+                            memcpy(&customStringState, buffer+COMMAND_SIZE, sizeof(StateInfo));
+                            printf("period: %d\n", customStringState.period);
+
+                            if (customStringState.period == 0) {
+                                // 전체 송신할 바이트 계산
+                                #if TCP_DUMMY_SEND
+                                #else
+                                memset(customStringStateOut.val0.subject, '\0', SUBJECT_SIZE);
+                                memcpy(customStringStateOut.val0.subject, customStringOut_.val0.subject.c_str(), customStringOut_.val0.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:customStringOut_.val0.subject.length());
+                                customStringStateOut.val0.val_i64 = customStringOut_.val0.value_i64;
+                                customStringStateOut.val0.val_dbl = customStringOut_.val0.value_dbl;
+                                memset(customStringStateOut.val9.subject, '\0', SUBJECT_SIZE);
+                                memcpy(customStringStateOut.val9.subject, customStringOut_.val9.subject.c_str(), customStringOut_.val9.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:customStringOut_.val9.subject.length());
+                                customStringStateOut.val9.val_i64 = customStringOut_.val9.value_i64;
+                                customStringStateOut.val9.val_dbl = customStringOut_.val9.value_dbl;
+                                #endif
+
+                                #if 0
+                                #else							
+                                byte_size = sizeof(command) + sizeof(customStringStateOut);
+                                u8_ptr = (char*)&byte_size;
+                                memcpy(buffer, u8_ptr, sizeof(byte_size));
+                                u8_ptr = (char*)&command;
+                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
+                                u8_ptr = (char*)&customStringStateOut;
+                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(customStringStateOut));
+                                buffer[ACK_IDX] = ACK_ONE;
+                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(customStringStateOut), 0);
                                 #endif
                             } else {
                             }
@@ -957,27 +1039,30 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 ts_total = ts_now;
 
                 // 전체 송신할 바이트 계산
-                #if 0
+                #if TCP_DUMMY_SEND
+                totalStateOut.platform.state += 8;
+                totalStateOut.platform.mode += 9;
+                
                 totalStateOut.sensor.front += 0.1;
                 totalStateOut.sensor.back += 0.2;
                 totalStateOut.sensor.right_front += 0.3;
                 totalStateOut.sensor.right_back += 0.4;
+
                 totalStateOut.pos.x += 0.5;
                 totalStateOut.pos.y += 0.6;
                 totalStateOut.pos.z += 0.7;
-                totalStateOut.platform.state += 8;
                 #else
-                platformStateOut.state = chatOut_.platformState.state; 
-                platformStateOut.mode = chatOut_.platformState.mode;
+                totalStateOut.platform.state = chatOut_.platformState.state; 
+                totalStateOut.platform.mode = chatOut_.platformState.mode;
 
-                sensorStateOut.front = chatOut_.sensorState.front;
-                sensorStateOut.back = chatOut_.sensorState.back;
-                sensorStateOut.right_front = chatOut_.sensorState.right_front;
-                sensorStateOut.right_back = chatOut_.sensorState.right_back;
+                totalStateOut.sensor.front = chatOut_.sensorState.front;
+                totalStateOut.sensor.back = chatOut_.sensorState.back;
+                totalStateOut.sensor.right_front = chatOut_.sensorState.right_front;
+                totalStateOut.sensor.right_back = chatOut_.sensorState.right_back;
                 
-                posStateOut.x = chatOut_.posState.x;
-                posStateOut.y = chatOut_.posState.y;
-                posStateOut.z = chatOut_.posState.z;
+                totalStateOut.pos.x = chatOut_.posState.x;
+                totalStateOut.pos.y = chatOut_.posState.y;
+                totalStateOut.pos.z = chatOut_.posState.z;
                 #endif
 
                 command = GetTotal;
@@ -997,7 +1082,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 ts_platform = ts_now;
 
                 // 전체 송신할 바이트 계산
-                #if 0
+                #if TCP_DUMMY_SEND
                 platformStateOut.state += 2;
                 platformStateOut.mode += 3;
                 #else
@@ -1022,7 +1107,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 ts_sensor = ts_now;
 
                 // 전체 송신할 바이트 계산
-                #if 0
+                #if TCP_DUMMY_SEND
                 sensorStateOut.front += 0.1;
                 sensorStateOut.back += 0.2;
                 sensorStateOut.right_front += 0.3;
@@ -1051,7 +1136,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 ts_position = ts_now;
 
                 // 전체 송신할 바이트 계산
-                #if 0
+                #if TCP_DUMMY_SEND
                 posStateOut.x += 0.1;
                 posStateOut.y += 0.2;
                 posStateOut.z += 0.3;
@@ -1078,7 +1163,65 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 ts_whisper = ts_now;
 
                 // 전체 송신할 바이트 계산
-                #if 0
+                #if TCP_DUMMY_SEND
+                whisperStateOut.agvOdometry.tfSensor.x1 += 0.1;
+                whisperStateOut.agvOdometry.odomWheel.x += 0.2;
+                whisperStateOut.agvOdometry.odomImu.x += 0.3;
+                whisperStateOut.agvOdometry.odom1AxisLidar.x += 0.4;
+                whisperStateOut.lBox.comdPx += 0.5;
+                whisperStateOut.pids.px.ref += 0.6;
+                whisperStateOut.pids.py.ref += 0.7;
+                whisperStateOut.pids.yaw.ref += 0.8;
+                whisperStateOut.profileJoints.px.initPos += 0.9;
+                whisperStateOut.profileJoints.py.initPos += 0.1;
+                whisperStateOut.profileJoints.yaw.initPos += 0.2;
+                whisperStateOut.profileJoints.yaw.tIn += 0.3;
+                #else
+                whisperStateOut.agvOdometry.tfSensor.x1 = whisperOut_.agvOdometry.tfSensor.x1;
+                whisperStateOut.agvOdometry.odomWheel.x = whisperOut_.agvOdometry.odomWheel.x;
+                whisperStateOut.agvOdometry.odomImu.x = whisperOut_.agvOdometry.odomImu.x;
+                whisperStateOut.agvOdometry.odom1AxisLidar.x = whisperOut_.agvOdometry.odom1AxisLidar.x;
+                whisperStateOut.lBox.comdPx = whisperOut_.lBox.comdPx;
+                whisperStateOut.pids.px.ref = whisperOut_.pids.px.ref;
+                whisperStateOut.pids.py.ref = whisperOut_.pids.py.ref;
+                whisperStateOut.pids.yaw.ref = whisperOut_.pids.yaw.ref;
+                whisperStateOut.profileJoints.px.initPos = whisperOut_.profileJoints.px.initPos;
+                whisperStateOut.profileJoints.py.initPos = whisperOut_.profileJoints.py.initPos;
+                whisperStateOut.profileJoints.yaw.initPos = whisperOut_.profileJoints.yaw.initPos;
+                whisperStateOut.profileJoints.yaw.tIn = whisperOut_.profileJoints.yaw.tIn;
+                #endif
+
+                command = GetWhisper;
+                	
+                byte_size = sizeof(command) + sizeof(whisperStateOut);
+                u8_ptr = (char*)&byte_size;
+                memcpy(buffer, u8_ptr, sizeof(byte_size));
+                u8_ptr = (char*)&command;
+                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
+                u8_ptr = (char*)&whisperStateOut;
+                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(whisperStateOut));
+                buffer[ACK_IDX] = ACK_STR;
+                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(whisperStateOut), 0);
+            }
+        
+            
+            if (whisperState.period !=0 && whisperState.period <= (ts_now-ts_whisper)) {
+                ts_whisper = ts_now;
+
+                // 전체 송신할 바이트 계산
+                #if TCP_DUMMY_SEND
+                whisperStateOut.agvOdometry.tfSensor.x1 += 0.1;
+                whisperStateOut.agvOdometry.odomWheel.x += 0.2;
+                whisperStateOut.agvOdometry.odomImu.x += 0.3;
+                whisperStateOut.agvOdometry.odom1AxisLidar.x += 0.4;
+                whisperStateOut.lBox.comdPx += 0.5;
+                whisperStateOut.pids.px.ref += 0.6;
+                whisperStateOut.pids.py.ref += 0.7;
+                whisperStateOut.pids.yaw.ref += 0.8;
+                whisperStateOut.profileJoints.px.initPos += 0.9;
+                whisperStateOut.profileJoints.py.initPos += 0.1;
+                whisperStateOut.profileJoints.yaw.initPos += 0.2;
+                whisperStateOut.profileJoints.yaw.tIn += 0.3;
                 #else
                 whisperStateOut.agvOdometry.tfSensor.x1 = whisperOut_.agvOdometry.tfSensor.x1;
                 whisperStateOut.agvOdometry.odomWheel.x = whisperOut_.agvOdometry.odomWheel.x;
@@ -1129,8 +1272,11 @@ int main(int argc, char** argv)
     
     ros::Subscriber chatOut_sub = nh.subscribe("/chatterbox/chatOut_topic", 100, chatOutCallBack);
     ros::Subscriber whisperOut_sub = nh.subscribe("/chatterbox/whisperOut_topic", 100, whisperOutCallBack);
+    // ros::Subscriber customStringOut_sub = nh.subscribe("/chatterbox/customStringOut_topic", 100, customStringOutCallBack);
+    ros::Subscriber customStringOut_sub = nh.subscribe("customStringOut_topic", 100, customStringOutCallBack);
     
     ros::Publisher chatIn_pub = nh.advertise<chatterbox::ChatIn>("chatIn_topic", 100);
+    ros::Publisher customStringOut_pub = nh.advertise<chatterbox::CustomStringOut>("customStringOut_topic", 100);
 
     int thread_rate = 200;
     boost::thread hThread(fThread, &thread_rate, &chatIn_pub);
@@ -1141,13 +1287,24 @@ int main(int argc, char** argv)
     double time_pre = time_cur;
     double time_diff;
 
+    chatterbox::CustomStringOut customStringOut;
+
     while(ros::ok())
     {
         time_cur = ros::Time::now().toSec();
         time_diff = time_cur - time_pre;
+// #define PERIOD  0.1
 #define PERIOD  0.1
         if ( time_diff > PERIOD) {
             time_pre = time_cur;
+            customStringOut.header.stamp = ros::Time::now();
+            customStringOut.val0.subject = "val0";
+            customStringOut.val0.value_i64 += 1;
+            customStringOut.val0.value_dbl += 2;
+            customStringOut.val9.subject = "val9val9val9val9";
+            customStringOut.val9.value_i64 += 3;
+            customStringOut.val9.value_dbl += 4;
+            customStringOut_pub.publish(customStringOut);
         }
 
         ros::spinOnce();

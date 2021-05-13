@@ -68,6 +68,8 @@ find_package(catkin REQUIRED COMPONENTS
    ProfileJoint.msg
    ProfileJoints.msg
    WhisperOut.msg
+   CustomString.msg
+   CustomStringOut.msg
  )
 
 ## Generate services in the 'srv' folder
