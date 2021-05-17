@@ -1,0 +1,16 @@
+Step 1. Upload an image
+- Upload
+
+Step 2. Crop you image( optional)
+- Pass
+
+Step 3. Apply styles( optional )
+- Pass
+
+Step 4. Select the icon format
+- Custom sizes(Multi-size in one icon)
+  : 256 x 256
+
+Step 5. Convert and download    
+- Convert ICO
+- Download your icon(s)
