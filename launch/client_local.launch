@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="aliencontrol" type="aliencontrol" name="aliencontrol_tcp_ui">
+        <param name="cmd" value="sh -c '/home/recipelab/catkin_ws/src/chatterbox/builds/executable/tcp_ui.exe 127.0.0.1 10200;'"/>
+    </node>
+</launch>

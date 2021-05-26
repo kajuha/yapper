@@ -440,6 +440,14 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(controlModePre), 0);
                             } else {
                                 controlModePre = controlMode;
+                                platformStateOut.mode = controlMode;
+
+                                now = ros::Time::now();
+                                chatIn.header.stamp = now;
+
+                                chatIn.command = platformStateOut.mode;
+
+                                // chatIn_pub->publish(chatIn);
                             }
                             #endif
                         break;
