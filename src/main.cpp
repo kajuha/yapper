@@ -316,11 +316,13 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
             // 버퍼개수 읽기(MSG_PEEK는 버퍼확인용)
             recv_len = recv(client_sock, buffer, DATA_LENGTH_BYTE, MSG_PEEK|MSG_DONTWAIT);
             if (recv_len >= DATA_LENGTH_BYTE) {
+                #if 0
                 printf("1st recv_len: %d, ", DATA_LENGTH_BYTE);
                 for (int cnt=0; cnt<DATA_LENGTH_BYTE; cnt++) {
                     printf("%02x ", buffer[cnt]);
                 }
                 printf("\n");
+                #endif
 
                 int trail_len;
                 // 뒤따르는 자료개수 확인
@@ -330,12 +332,13 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 // 뒤따르는 버퍼 읽기(MSG_PEEK는 버퍼확인용)
                 recv_len = recv(client_sock, buffer, DATA_LENGTH_BYTE+trail_len, MSG_PEEK|MSG_DONTWAIT);
                 if (recv_len >= DATA_LENGTH_BYTE+trail_len) {
-
+                    #if 0
                     printf("2st recv_len: %d, ", trail_len);
                     for (int i=0; i<trail_len; i++) {
                         printf("%02x ", *(buffer+DATA_LENGTH_BYTE+i));
                     }
                     printf("\n");
+                    #endif
 
                     // 응답 프레임 송신
                     #if 1
