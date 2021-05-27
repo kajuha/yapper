@@ -1,5 +1,7 @@
 <launch>
-	<include file="$(find chatterbox)/launch/base_local.launch" />
+	<include file="$(find chatterbox)/launch/base_local.launch">
+    	<arg name="output_type" value="log"/>
+	</include>
 
 	<include file="$(find chatterbox)/launch/client_local.launch" />
 </launch>

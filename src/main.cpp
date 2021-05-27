@@ -200,7 +200,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
         printf("clientOpen while started (%d line)\n", __LINE__);
         // 소켓 열기
         if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-            perror("socket open error, ");
+            // perror("socket open error, ");
+            printf("socket open error\n");
             // return;
             continue;
         }
@@ -222,7 +223,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
         // 소켓 설정 등록
         if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-            perror("bind error, ");
+            // perror("bind error, ");
+            printf("bind error\n");
             // return;
             usleep(500000);
             continue;
@@ -243,12 +245,14 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
         timeout.tv_usec = 0;
         
         if (setsockopt (sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
-            perror("setsockopt failed ");
+            // perror("setsockopt failed, ");
+            printf("setsockopt failed\n");
         }
 
         // 연결 요청 대기
         if (listen(sock, 5) < 0) {
-            perror("listen error, ");
+            // perror("listen error, ");
+            printf("listen error\n");
             // return;
             usleep(500000);
             continue;
@@ -263,7 +267,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
         printf("socket : %d\n", sock);
         // 연결 수락
         if ((client_sock = accept(sock, (struct sockaddr *)&client_addr, (socklen_t*)&addr_len)) < 0) {
-            perror("accept error, ");
+            // perror("accept error, ");
+            printf("accept error\n");
             // goto PROGRAM_END;
             // return;
             printf("socket : %d\n", sock);
