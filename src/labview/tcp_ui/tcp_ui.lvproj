@@ -125,7 +125,7 @@
 				<Property Name="Bld_localDestDir" Type="Path">/home/kajuha/catkin_ws/src/chatterbox/builds/executable</Property>
 				<Property Name="Bld_modifyLibraryFile" Type="Bool">true</Property>
 				<Property Name="Bld_previewCacheID" Type="Str">{77B7CC5C-B585-11EB-91FF-B4A9FCDF48BD}</Property>
-				<Property Name="Bld_version.build" Type="Int">13</Property>
+				<Property Name="Bld_version.build" Type="Int">16</Property>
 				<Property Name="Bld_version.major" Type="Int">1</Property>
 				<Property Name="DestinationCount" Type="Int">2</Property>
 				<Property Name="Destination[0].destName" Type="Str">tcp_ui.exe</Property>

@@ -27,6 +27,9 @@
 #define OFF                 0
 #define TCP_DUMMY_SEND      OFF
 
+// 센서 종류
+uint32_t sensor;
+
 // 플랫폼 위치 파라미터
 typedef struct _PosState {
 	double x;	// unit: m
@@ -134,7 +137,8 @@ typedef enum _Command {
 	StartPosControl=10,
 	GetTotal=11, GetPlatform, GetSensor, GetPos,
 	InitPlatform=15,
-    GetWhisper=16
+    GetWhisper=16,
+    SetSensor=17
 } Command;
 
 SensorState sensorStateOut;
@@ -526,6 +530,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             chatIn.header.stamp = now;
 
                             chatIn.command = platformStateOut.mode;
+
+                            chatIn.sensor = sensor;
                             
                             chatIn.jogParam.jogInfo.front = jogInfoIn.front;
                             chatIn.jogParam.jogInfo.back = jogInfoIn.back;
@@ -576,6 +582,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             chatIn.header.stamp = now;
 
                             chatIn.command = platformStateOut.mode;
+
+                            chatIn.sensor = sensor;
 
                             chatIn.posParam.posState.x = posStateIn.x;
                             chatIn.posParam.posState.y = posStateIn.y;
@@ -872,6 +880,18 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 #endif
                             } else {
                             }
+                        break;
+                        case SetSensor:
+                            printf("Receviced SetSensor, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+                            memcpy(&sensor, buffer+COMMAND_SIZE, sizeof(uint32_t));
+                            printf("sensor: %d\n", sensor);
+
+                            now = ros::Time::now();
+                            chatIn.header.stamp = now;
+
+                            chatIn.sensor = sensor;
+
+                            // chatIn_pub->publish(chatIn);
                         break;
                         default:
                             printf("unknown command\n");
