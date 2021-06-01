@@ -68,7 +68,7 @@ typedef struct _StopInfo {
 
 // 상태입력 정보
 typedef struct _StateInfo {
-	int32_t period;
+	uint32_t period;
 } StateInfo;
 
 // 센서 정보
@@ -81,8 +81,8 @@ typedef struct _SensorState {
 
 // 플랫폼 정보
 typedef struct _PlatformState {
-	int32_t state;	// ready=0, stop=1, run=2, error=3
-    int32_t mode;
+    uint32_t mode;
+	uint32_t state;
 } PlatformState;
 
 // 총 정보
@@ -323,7 +323,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 #if 0
                 printf("1st recv_len: %d, ", DATA_LENGTH_BYTE);
                 for (int cnt=0; cnt<DATA_LENGTH_BYTE; cnt++) {
-                    printf("%02x ", buffer[cnt]);
+                    printf("%02x ", buffer[cnt]&0xff);
                 }
                 printf("\n");
                 #endif
@@ -339,7 +339,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                     #if 0
                     printf("2st recv_len: %d, ", trail_len);
                     for (int i=0; i<trail_len; i++) {
-                        printf("%02x ", *(buffer+DATA_LENGTH_BYTE+i));
+                        printf("%02x ", *(buffer+DATA_LENGTH_BYTE+i)&0xff);
                     }
                     printf("\n");
                     #endif
@@ -434,13 +434,13 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                         break;
                         case SetControlMode:
                             static uint32_t controlMode, controlModePre;
-
-                            printf("Receviced SetControlMode, trail byte(%d)\n", trail_len-COMMAND_SIZE);
                             memcpy((char*)&controlMode, buffer+COMMAND_SIZE, sizeof(controlMode));
-                            printf("mode: %d\n", controlMode);
 
                             #if ACK_OK
                             if (controlMode == 0) {
+                                printf("Request SetControlMode, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+                                printf("mode: %d\n", controlModePre);
+
                                 byte_size = sizeof(command) + sizeof(controlMode);
                                 u8_ptr = (char*)&byte_size;
                                 memcpy(buffer, u8_ptr, sizeof(byte_size));
@@ -451,6 +451,9 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 buffer[ACK_IDX] = ACK_RES;
                                 send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(controlModePre), 0);
                             } else {
+                                printf("Receviced SetControlMode, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+                                printf("mode: %d\n", controlMode);
+
                                 controlModePre = controlMode;
                                 platformStateOut.mode = controlMode;
 
@@ -466,17 +469,18 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                         case SetJogParam:
                             static VelParams jogVelParamsIn, jogVelParamsInPre;
                             memcpy(&jogVelParamsIn, buffer+COMMAND_SIZE, sizeof(jogVelParamsIn));
-                            printf("Receviced SetJogParam, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            printf("x.v: %.3lf, x.a: %.3lf, x.vm: %.3lf, y.v: %.3lf, y.a: %.3lf, y.vm: %.3lf, z.v: %.3lf, z.a: %.3lf, z.vm: %.3lf\n",
-                                jogVelParamsIn.x.vel, jogVelParamsIn.x.acc, jogVelParamsIn.x.vmax,
-                                jogVelParamsIn.y.vel, jogVelParamsIn.y.acc, jogVelParamsIn.y.vmax,
-                                jogVelParamsIn.z.vel, jogVelParamsIn.z.acc, jogVelParamsIn.z.vmax);
 
                             #if ACK_OK
                             static VelParams *jvpi = &jogVelParamsIn;
                             if (jvpi->x.vel == 0.0 && jvpi->x.acc == 0.0 && jvpi->x.vmax == 0.0 &&
                                 jvpi->y.vel == 0.0 && jvpi->y.acc == 0.0 && jvpi->y.vmax == 0.0 &&
                                 jvpi->z.vel == 0.0 && jvpi->z.acc == 0.0 && jvpi->z.vmax == 0.0) {
+                                printf("Request SetJogParam, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+                                printf("x.v: %.3lf, x.a: %.3lf, x.vm: %.3lf, y.v: %.3lf, y.a: %.3lf, y.vm: %.3lf, z.v: %.3lf, z.a: %.3lf, z.vm: %.3lf\n",
+                                    jogVelParamsInPre.x.vel, jogVelParamsInPre.x.acc, jogVelParamsInPre.x.vmax,
+                                    jogVelParamsInPre.y.vel, jogVelParamsInPre.y.acc, jogVelParamsInPre.y.vmax,
+                                    jogVelParamsInPre.z.vel, jogVelParamsInPre.z.acc, jogVelParamsInPre.z.vmax);
+
                                 byte_size = sizeof(command) + sizeof(jogVelParamsIn);
                                 u8_ptr = (char*)&byte_size;
                                 memcpy(buffer, u8_ptr, sizeof(byte_size));
@@ -487,6 +491,12 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 buffer[ACK_IDX] = ACK_RES;
                                 send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(jogVelParamsInPre), 0);
                             } else {
+                                printf("Receviced SetJogParam, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+                                printf("x.v: %.3lf, x.a: %.3lf, x.vm: %.3lf, y.v: %.3lf, y.a: %.3lf, y.vm: %.3lf, z.v: %.3lf, z.a: %.3lf, z.vm: %.3lf\n",
+                                    jogVelParamsIn.x.vel, jogVelParamsIn.x.acc, jogVelParamsIn.x.vmax,
+                                    jogVelParamsIn.y.vel, jogVelParamsIn.y.acc, jogVelParamsIn.y.vmax,
+                                    jogVelParamsIn.z.vel, jogVelParamsIn.z.acc, jogVelParamsIn.z.vmax);
+
                                 memcpy((char*)&jogVelParamsInPre, (char*)&jogVelParamsIn, sizeof(jogVelParamsIn));
                             }
                             #endif
@@ -494,17 +504,18 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                         case SetPosParam:
                             static VelParams posVelParamsIn, posVelParamsInPre;
                             memcpy(&posVelParamsIn, buffer+COMMAND_SIZE, sizeof(posVelParamsIn));
-                            printf("Receviced SetPosParam, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            printf("x.v: %.3lf, x.a: %.3lf, x.vm: %.3lf, y.v: %.3lf, y.a: %.3lf, y.vm: %.3lf, z.v: %.3lf, z.a: %.3lf, z.vm: %.3lf\n",
-                                posVelParamsIn.x.vel, posVelParamsIn.x.acc, posVelParamsIn.x.vmax,
-                                posVelParamsIn.y.vel, posVelParamsIn.y.acc, posVelParamsIn.y.vmax,
-                                posVelParamsIn.z.vel, posVelParamsIn.z.acc, posVelParamsIn.z.vmax);
 
                             #if ACK_OK
                             static VelParams *pvpi = &posVelParamsIn;
                             if (pvpi->x.vel == 0.0 && pvpi->x.acc == 0.0 && pvpi->x.vmax == 0.0 &&
                                 pvpi->y.vel == 0.0 && pvpi->y.acc == 0.0 && pvpi->y.vmax == 0.0 &&
                                 pvpi->z.vel == 0.0 && pvpi->z.acc == 0.0 && pvpi->z.vmax == 0.0) {
+                                printf("Request SetPosParam, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+                                printf("x.v: %.3lf, x.a: %.3lf, x.vm: %.3lf, y.v: %.3lf, y.a: %.3lf, y.vm: %.3lf, z.v: %.3lf, z.a: %.3lf, z.vm: %.3lf\n",
+                                    posVelParamsInPre.x.vel, posVelParamsInPre.x.acc, posVelParamsInPre.x.vmax,
+                                    posVelParamsInPre.y.vel, posVelParamsInPre.y.acc, posVelParamsInPre.y.vmax,
+                                    posVelParamsInPre.z.vel, posVelParamsInPre.z.acc, posVelParamsInPre.z.vmax);
+
                                 byte_size = sizeof(command) + sizeof(posVelParamsIn);
                                 u8_ptr = (char*)&byte_size;
                                 memcpy(buffer, u8_ptr, sizeof(byte_size));
@@ -515,6 +526,12 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 buffer[ACK_IDX] = ACK_RES;
                                 send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(posVelParamsInPre), 0);
                             } else {
+                                printf("Receviced SetPosParam, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+                                printf("x.v: %.3lf, x.a: %.3lf, x.vm: %.3lf, y.v: %.3lf, y.a: %.3lf, y.vm: %.3lf, z.v: %.3lf, z.a: %.3lf, z.vm: %.3lf\n",
+                                    posVelParamsIn.x.vel, posVelParamsIn.x.acc, posVelParamsIn.x.vmax,
+                                    posVelParamsIn.y.vel, posVelParamsIn.y.acc, posVelParamsIn.y.vmax,
+                                    posVelParamsIn.z.vel, posVelParamsIn.z.acc, posVelParamsIn.z.vmax);
+
                                 memcpy((char*)&posVelParamsInPre, (char*)&posVelParamsIn, sizeof(posVelParamsIn));
                             }
                             #endif
@@ -555,12 +572,13 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                         case SetPos:
                             static PosState posStateIn, posStateInPre;
                             memcpy(&posStateIn, buffer+COMMAND_SIZE, sizeof(posStateIn));
-                            printf("Receviced SetPos, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            printf("pos.x: %.3lf, pos.y: %.3lf, pos.theta: %.3lf\n", posStateIn.x, posStateIn.y, posStateIn.z);
 
                             #if ACK_OK
                             static PosState *psi = &posStateIn;
                             if (psi->x == 0.0 && psi->y == 0.0 && psi->z == 0.0) {
+                                printf("Request SetPos, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+                                printf("pos.x: %.3lf, pos.y: %.3lf, pos.theta: %.3lf\n", posStateInPre.x, posStateInPre.y, posStateInPre.z);
+
                                 byte_size = sizeof(command) + sizeof(posStateIn);
                                 u8_ptr = (char*)&byte_size;
                                 memcpy(buffer, u8_ptr, sizeof(byte_size));
@@ -571,6 +589,9 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 buffer[ACK_IDX] = ACK_RES;
                                 send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(posStateInPre), 0);
                             } else {
+                                printf("Receviced SetPos, trail byte(%d)\n", trail_len-COMMAND_SIZE);
+                                printf("pos.x: %.3lf, pos.y: %.3lf, pos.theta: %.3lf\n", posStateIn.x, posStateIn.y, posStateIn.z);
+
                                 memcpy((char*)&posStateInPre, (char*)&posStateIn, sizeof(posStateIn));
                             }
                             #endif
@@ -621,8 +642,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 totalStateOut.pos.y += 6;
                                 totalStateOut.pos.z += 7;
 
-                                totalStateOut.platform.state += 8;
-                                totalStateOut.platform.mode += 9;
+                                totalStateOut.platform.mode += 8;
+                                totalStateOut.platform.state += 9;
                                 #else
                                 totalStateOut.sensor.front = chatOut_.sensorState.front;
                                 totalStateOut.sensor.back = chatOut_.sensorState.back;
@@ -633,8 +654,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 totalStateOut.pos.y = chatOut_.posState.y;
                                 totalStateOut.pos.z = chatOut_.posState.z;
 
-                                totalStateOut.platform.state = chatOut_.platformState.state; 
                                 totalStateOut.platform.mode = chatOut_.platformState.mode;
+                                totalStateOut.platform.state = chatOut_.platformState.state; 
                                 #endif
 
                                 #if 0
@@ -667,11 +688,11 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             if (platformState.period == 0) {
                                 // 전체 송신할 바이트 계산
                                 #if TCP_DUMMY_SEND
-                                platformStateOut.state += 1;
-                                platformStateOut.mode += 2;
+                                platformStateOut.mode += 1;
+                                platformStateOut.state += 2;
                                 #else
-                                platformStateOut.state = chatOut_.platformState.state; 
                                 platformStateOut.mode = chatOut_.platformState.mode;
+                                platformStateOut.state = chatOut_.platformState.state; 
                                 #endif
 
                                 #if 0
@@ -983,8 +1004,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 totalStateOut.pos.y += 6;
                 totalStateOut.pos.z += 7;
 
-                totalStateOut.platform.state += 8;
-                totalStateOut.platform.mode += 9;
+                totalStateOut.platform.mode += 8;
+                totalStateOut.platform.state += 9;
                 #else
                 totalStateOut.sensor.front = chatOut_.sensorState.front;
                 totalStateOut.sensor.back = chatOut_.sensorState.back;
@@ -995,8 +1016,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 totalStateOut.pos.y = chatOut_.posState.y;
                 totalStateOut.pos.z = chatOut_.posState.z;
 
-                totalStateOut.platform.state = chatOut_.platformState.state; 
                 totalStateOut.platform.mode = chatOut_.platformState.mode;
+                totalStateOut.platform.state = chatOut_.platformState.state; 
                 #endif
 
                 command = GetTotal;
@@ -1017,11 +1038,11 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                 // 전체 송신할 바이트 계산
                 #if TCP_DUMMY_SEND
-                platformStateOut.state += 1;
-                platformStateOut.mode += 2;
+                platformStateOut.mode += 1;
+                platformStateOut.state += 2;
                 #else
-                platformStateOut.state = chatOut_.platformState.state; 
                 platformStateOut.mode = chatOut_.platformState.mode;
+                platformStateOut.state = chatOut_.platformState.state; 
                 #endif
 
                 command = GetPlatform;
