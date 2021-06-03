@@ -123,6 +123,16 @@ struct WhisperState {
     CustomString val17;
     CustomString val18;
     CustomString val19;
+    CustomString val20;
+    CustomString val21;
+    CustomString val22;
+    CustomString val23;
+    CustomString val24;
+    CustomString val25;
+    CustomString val26;
+    CustomString val27;
+    CustomString val28;
+    CustomString val29;
 };
 #pragma pack(pop)
 
@@ -884,7 +894,37 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 whisperStateOut.val18.value = whisperOut_.val18.value;                
                                 memset(whisperStateOut.val19.subject, '\0', SUBJECT_SIZE);
                                 memcpy(whisperStateOut.val19.subject, whisperOut_.val19.subject.c_str(), whisperOut_.val19.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val19.subject.length());
-                                whisperStateOut.val19.value = whisperOut_.val19.value;
+                                whisperStateOut.val19.value = whisperOut_.val19.value;                
+                                memset(whisperStateOut.val20.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val20.subject, whisperOut_.val20.subject.c_str(), whisperOut_.val20.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val20.subject.length());
+                                whisperStateOut.val20.value = whisperOut_.val20.value;                
+                                memset(whisperStateOut.val21.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val21.subject, whisperOut_.val21.subject.c_str(), whisperOut_.val21.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val21.subject.length());
+                                whisperStateOut.val21.value = whisperOut_.val21.value;                
+                                memset(whisperStateOut.val22.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val22.subject, whisperOut_.val22.subject.c_str(), whisperOut_.val22.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val22.subject.length());
+                                whisperStateOut.val22.value = whisperOut_.val22.value;                
+                                memset(whisperStateOut.val23.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val23.subject, whisperOut_.val23.subject.c_str(), whisperOut_.val23.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val23.subject.length());
+                                whisperStateOut.val23.value = whisperOut_.val23.value;                
+                                memset(whisperStateOut.val24.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val24.subject, whisperOut_.val24.subject.c_str(), whisperOut_.val24.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val24.subject.length());
+                                whisperStateOut.val24.value = whisperOut_.val24.value;                
+                                memset(whisperStateOut.val25.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val25.subject, whisperOut_.val25.subject.c_str(), whisperOut_.val25.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val25.subject.length());
+                                whisperStateOut.val25.value = whisperOut_.val25.value;                
+                                memset(whisperStateOut.val26.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val26.subject, whisperOut_.val26.subject.c_str(), whisperOut_.val26.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val26.subject.length());
+                                whisperStateOut.val26.value = whisperOut_.val26.value;                
+                                memset(whisperStateOut.val27.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val27.subject, whisperOut_.val27.subject.c_str(), whisperOut_.val27.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val27.subject.length());
+                                whisperStateOut.val27.value = whisperOut_.val27.value;                
+                                memset(whisperStateOut.val28.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val28.subject, whisperOut_.val28.subject.c_str(), whisperOut_.val28.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val28.subject.length());
+                                whisperStateOut.val28.value = whisperOut_.val28.value;                
+                                memset(whisperStateOut.val29.subject, '\0', SUBJECT_SIZE);
+                                memcpy(whisperStateOut.val29.subject, whisperOut_.val29.subject.c_str(), whisperOut_.val29.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val29.subject.length());
+                                whisperStateOut.val29.value = whisperOut_.val29.value;
                                 #endif
 
                                 #if 0

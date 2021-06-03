@@ -3,5 +3,7 @@
     	<arg name="message_display" value="log"/>
 	</include>
 
-	<include file="$(find chatterbox)/launch/client_local.launch" />
+	<include file="$(find chatterbox)/launch/client_local.launch">
+    	<arg name="user_name" value="recipelab"/>
+	</include>
 </launch>
