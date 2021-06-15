@@ -34,7 +34,8 @@ uint32_t sensor;
 typedef struct _PosState {
 	double x;	// unit: m
 	double y;	// unit: m
-	double z;	// unit: rad
+	double rz;	// unit: deg
+	double ang;	// unit: deg
 } PosState;
 
 // 속도 파라미터
@@ -48,7 +49,7 @@ typedef struct _VelParam {
 typedef struct _VelParams {
 	VelParam x;
 	VelParam y;
-	VelParam z;
+	VelParam rz;
 } VelParams;
 
 // 조그 정보
@@ -484,12 +485,12 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             static VelParams *jvpi = &jogVelParamsIn;
                             if (jvpi->x.vel == 0.0 && jvpi->x.acc == 0.0 && jvpi->x.vmax == 0.0 &&
                                 jvpi->y.vel == 0.0 && jvpi->y.acc == 0.0 && jvpi->y.vmax == 0.0 &&
-                                jvpi->z.vel == 0.0 && jvpi->z.acc == 0.0 && jvpi->z.vmax == 0.0) {
+                                jvpi->rz.vel == 0.0 && jvpi->rz.acc == 0.0 && jvpi->rz.vmax == 0.0) {
                                 printf("Request SetJogParam, trail byte(%d)\n", trail_len-COMMAND_SIZE);
                                 printf("x.v: %.3lf, x.a: %.3lf, x.vm: %.3lf, y.v: %.3lf, y.a: %.3lf, y.vm: %.3lf, z.v: %.3lf, z.a: %.3lf, z.vm: %.3lf\n",
                                     jogVelParamsInPre.x.vel, jogVelParamsInPre.x.acc, jogVelParamsInPre.x.vmax,
                                     jogVelParamsInPre.y.vel, jogVelParamsInPre.y.acc, jogVelParamsInPre.y.vmax,
-                                    jogVelParamsInPre.z.vel, jogVelParamsInPre.z.acc, jogVelParamsInPre.z.vmax);
+                                    jogVelParamsInPre.rz.vel, jogVelParamsInPre.rz.acc, jogVelParamsInPre.rz.vmax);
 
                                 byte_size = sizeof(command) + sizeof(jogVelParamsIn);
                                 u8_ptr = (char*)&byte_size;
@@ -505,7 +506,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 printf("x.v: %.3lf, x.a: %.3lf, x.vm: %.3lf, y.v: %.3lf, y.a: %.3lf, y.vm: %.3lf, z.v: %.3lf, z.a: %.3lf, z.vm: %.3lf\n",
                                     jogVelParamsIn.x.vel, jogVelParamsIn.x.acc, jogVelParamsIn.x.vmax,
                                     jogVelParamsIn.y.vel, jogVelParamsIn.y.acc, jogVelParamsIn.y.vmax,
-                                    jogVelParamsIn.z.vel, jogVelParamsIn.z.acc, jogVelParamsIn.z.vmax);
+                                    jogVelParamsIn.rz.vel, jogVelParamsIn.rz.acc, jogVelParamsIn.rz.vmax);
 
                                 memcpy((char*)&jogVelParamsInPre, (char*)&jogVelParamsIn, sizeof(jogVelParamsIn));
                             }
@@ -519,12 +520,12 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             static VelParams *pvpi = &posVelParamsIn;
                             if (pvpi->x.vel == 0.0 && pvpi->x.acc == 0.0 && pvpi->x.vmax == 0.0 &&
                                 pvpi->y.vel == 0.0 && pvpi->y.acc == 0.0 && pvpi->y.vmax == 0.0 &&
-                                pvpi->z.vel == 0.0 && pvpi->z.acc == 0.0 && pvpi->z.vmax == 0.0) {
+                                pvpi->rz.vel == 0.0 && pvpi->rz.acc == 0.0 && pvpi->rz.vmax == 0.0) {
                                 printf("Request SetPosParam, trail byte(%d)\n", trail_len-COMMAND_SIZE);
                                 printf("x.v: %.3lf, x.a: %.3lf, x.vm: %.3lf, y.v: %.3lf, y.a: %.3lf, y.vm: %.3lf, z.v: %.3lf, z.a: %.3lf, z.vm: %.3lf\n",
                                     posVelParamsInPre.x.vel, posVelParamsInPre.x.acc, posVelParamsInPre.x.vmax,
                                     posVelParamsInPre.y.vel, posVelParamsInPre.y.acc, posVelParamsInPre.y.vmax,
-                                    posVelParamsInPre.z.vel, posVelParamsInPre.z.acc, posVelParamsInPre.z.vmax);
+                                    posVelParamsInPre.rz.vel, posVelParamsInPre.rz.acc, posVelParamsInPre.rz.vmax);
 
                                 byte_size = sizeof(command) + sizeof(posVelParamsIn);
                                 u8_ptr = (char*)&byte_size;
@@ -540,7 +541,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 printf("x.v: %.3lf, x.a: %.3lf, x.vm: %.3lf, y.v: %.3lf, y.a: %.3lf, y.vm: %.3lf, z.v: %.3lf, z.a: %.3lf, z.vm: %.3lf\n",
                                     posVelParamsIn.x.vel, posVelParamsIn.x.acc, posVelParamsIn.x.vmax,
                                     posVelParamsIn.y.vel, posVelParamsIn.y.acc, posVelParamsIn.y.vmax,
-                                    posVelParamsIn.z.vel, posVelParamsIn.z.acc, posVelParamsIn.z.vmax);
+                                    posVelParamsIn.rz.vel, posVelParamsIn.rz.acc, posVelParamsIn.rz.vmax);
 
                                 memcpy((char*)&posVelParamsInPre, (char*)&posVelParamsIn, sizeof(posVelParamsIn));
                             }
@@ -569,13 +570,13 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                             chatIn.jogParam.velParams.x.acc = jogVelParamsIn.x.acc;
                             chatIn.jogParam.velParams.y.acc = jogVelParamsIn.y.acc;
-                            chatIn.jogParam.velParams.z.acc = jogVelParamsIn.z.acc;
+                            chatIn.jogParam.velParams.rz.acc = jogVelParamsIn.rz.acc;
                             chatIn.jogParam.velParams.x.vel = jogVelParamsIn.x.vel;
                             chatIn.jogParam.velParams.y.vel = jogVelParamsIn.y.vel;
-                            chatIn.jogParam.velParams.z.vel = jogVelParamsIn.z.vel;
+                            chatIn.jogParam.velParams.rz.vel = jogVelParamsIn.rz.vel;
                             chatIn.jogParam.velParams.x.vmax =jogVelParamsIn.x.vmax;
                             chatIn.jogParam.velParams.y.vmax =jogVelParamsIn.y.vmax;
-                            chatIn.jogParam.velParams.z.vmax =jogVelParamsIn.z.vmax;
+                            chatIn.jogParam.velParams.rz.vmax =jogVelParamsIn.rz.vmax;
 
                             chatIn_pub->publish(chatIn);
                         break;
@@ -585,9 +586,9 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                             #if ACK_OK
                             static PosState *psi = &posStateIn;
-                            if (psi->x == 0.0 && psi->y == 0.0 && psi->z == 0.0) {
+                            if (psi->x == 0.0 && psi->y == 0.0 && psi->rz == 0.0 && psi->ang == 0.0) {
                                 printf("Request SetPos, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                                printf("pos.x: %.3lf, pos.y: %.3lf, pos.theta: %.3lf\n", posStateInPre.x, posStateInPre.y, posStateInPre.z);
+                                printf("pos.x: %.3lf, pos.y: %.3lf, pos.theta: %.3lf, pos.ang: %.3lf\n", posStateInPre.x, posStateInPre.y, posStateInPre.rz, posStateInPre.ang);
 
                                 byte_size = sizeof(command) + sizeof(posStateIn);
                                 u8_ptr = (char*)&byte_size;
@@ -600,7 +601,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(posStateInPre), 0);
                             } else {
                                 printf("Receviced SetPos, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                                printf("pos.x: %.3lf, pos.y: %.3lf, pos.theta: %.3lf\n", posStateIn.x, posStateIn.y, posStateIn.z);
+                                printf("pos.x: %.3lf, pos.y: %.3lf, pos.theta: %.3lf, pos.ang: %.3lf\n", posStateIn.x, posStateIn.y, posStateIn.rz, posStateIn.ang);
 
                                 memcpy((char*)&posStateInPre, (char*)&posStateIn, sizeof(posStateIn));
                             }
@@ -618,17 +619,18 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                             chatIn.posParam.posState.x = posStateIn.x;
                             chatIn.posParam.posState.y = posStateIn.y;
-                            chatIn.posParam.posState.z = posStateIn.z;
+                            chatIn.posParam.posState.rz = posStateIn.rz;
+                            chatIn.posParam.posState.ang = posStateIn.ang;
 
                             chatIn.posParam.velParams.x.acc = posVelParamsIn.x.acc;
                             chatIn.posParam.velParams.y.acc = posVelParamsIn.y.acc;
-                            chatIn.posParam.velParams.z.acc = posVelParamsIn.z.acc;
+                            chatIn.posParam.velParams.rz.acc = posVelParamsIn.rz.acc;
                             chatIn.posParam.velParams.x.vel = posVelParamsIn.x.vel;
                             chatIn.posParam.velParams.y.vel = posVelParamsIn.y.vel;
-                            chatIn.posParam.velParams.z.vel = posVelParamsIn.z.vel;
+                            chatIn.posParam.velParams.rz.vel = posVelParamsIn.rz.vel;
                             chatIn.posParam.velParams.x.vmax = posVelParamsIn.x.vmax;
                             chatIn.posParam.velParams.y.vmax = posVelParamsIn.y.vmax;
-                            chatIn.posParam.velParams.z.vmax = posVelParamsIn.z.vmax;
+                            chatIn.posParam.velParams.rz.vmax = posVelParamsIn.rz.vmax;
 
                             chatIn_pub->publish(chatIn);
                         break;
@@ -650,7 +652,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                                 totalStateOut.pos.x += 5;
                                 totalStateOut.pos.y += 6;
-                                totalStateOut.pos.z += 7;
+                                totalStateOut.pos.rz += 7;
+                                totalStateOut.pos.ang += 8;
 
                                 totalStateOut.platform.mode += 8;
                                 totalStateOut.platform.state += 9;
@@ -662,7 +665,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 
                                 totalStateOut.pos.x = chatOut_.posState.x;
                                 totalStateOut.pos.y = chatOut_.posState.y;
-                                totalStateOut.pos.z = chatOut_.posState.z;
+                                totalStateOut.pos.rz = chatOut_.posState.rz;
+                                totalStateOut.pos.ang = chatOut_.posState.ang;
 
                                 totalStateOut.platform.mode = chatOut_.platformState.mode;
                                 totalStateOut.platform.state = chatOut_.platformState.state; 
@@ -778,11 +782,13 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 #if TCP_DUMMY_SEND
                                 posStateOut.x += 1;
                                 posStateOut.y += 2;
-                                posStateOut.z += 3;
+                                posStateOut.rz += 3;
+                                posStateOut.ang += 4;
                                 #else
                                 posStateOut.x = chatOut_.posState.x;
                                 posStateOut.y = chatOut_.posState.y;
-                                posStateOut.z = chatOut_.posState.z;
+                                posStateOut.rz = chatOut_.posState.rz;
+                                posStateOut.ang = chatOut_.posState.ang;
                                 #endif
 
                                 #if 0
@@ -974,7 +980,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
             }
 
             #if 0
-            static PosState posStateTest = {0.0, 10.0, 0.0};
+            static PosState posStateTest = {0.0, 10.0, 0.0, 0.0};
             #if 1
             #define SEND_PERIOD_MS	10
             if (SEND_PERIOD_MS <= (ts_now-ts_dummy)) {
@@ -982,7 +988,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                 posStateTest.x += 0.1;
                 posStateTest.y -= 0.1;
-                posStateTest.z = posStateTest.x + 1;
+                posStateTest.rz = posStateTest.x + 1;
+                posStateTest.ang = posStateTest.y + 2;
                 if (posStateTest.x > 10.0) {
                     posStateTest.x = 0.0;
                     posStateTest.y = 10.0;
@@ -1006,7 +1013,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
             #else				
             posStateTest.x += 0.1;
             posStateTest.y -= 0.1;
-            posStateTest.z = posStateTest.x + 1;
+            posStateTest.rz = posStateTest.x + 1;
+            posStateTest.ang = posStateTest.y + 2;
             if (posStateTest.x > 10.0) {
                 posStateTest.x = 0.0;
                 posStateTest.y = 10.0;
@@ -1042,7 +1050,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
                 totalStateOut.pos.x += 5;
                 totalStateOut.pos.y += 6;
-                totalStateOut.pos.z += 7;
+                totalStateOut.pos.rz += 7;
+                totalStateOut.pos.ang += 8;
 
                 totalStateOut.platform.mode += 8;
                 totalStateOut.platform.state += 9;
@@ -1054,7 +1063,8 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 
                 totalStateOut.pos.x = chatOut_.posState.x;
                 totalStateOut.pos.y = chatOut_.posState.y;
-                totalStateOut.pos.z = chatOut_.posState.z;
+                totalStateOut.pos.rz = chatOut_.posState.rz;
+                totalStateOut.pos.ang = chatOut_.posState.ang;
 
                 totalStateOut.platform.mode = chatOut_.platformState.mode;
                 totalStateOut.platform.state = chatOut_.platformState.state; 
@@ -1134,11 +1144,13 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                 #if TCP_DUMMY_SEND
                 posStateOut.x += 1;
                 posStateOut.y += 2;
-                posStateOut.z += 3;
+                posStateOut.rz += 3;
+                posStateOut.ang += 4;
                 #else
                 posStateOut.x = chatOut_.posState.x;
                 posStateOut.y = chatOut_.posState.y;
-                posStateOut.z = chatOut_.posState.z;
+                posStateOut.rz = chatOut_.posState.rz;
+                posStateOut.ang = chatOut_.posState.ang;
                 #endif
 
                 command = GetPos;
