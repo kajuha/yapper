@@ -31,12 +31,18 @@
 uint32_t sensor;
 
 // 플랫폼 위치 파라미터
-typedef struct _PosState {
+typedef struct _PosStateIn {
+	double x;	// unit: m
+	double y;	// unit: m
+	double rz;	// unit: deg
+} PosStateIn;
+
+typedef struct _PosStateOut {
 	double x;	// unit: m
 	double y;	// unit: m
 	double rz;	// unit: deg
 	double ang;	// unit: deg
-} PosState;
+} PosStateOut;
 
 // 속도 파라미터
 typedef struct _VelParam {
@@ -90,7 +96,7 @@ typedef struct _PlatformState {
 #pragma pack(push, 1)
 typedef struct _TotalState {
 	SensorState sensor;
-	PosState pos;
+	PosStateOut pos;
 	PlatformState platform;
 } TotalState;
 #pragma pack(pop)
@@ -153,7 +159,7 @@ typedef enum _Command {
 } Command;
 
 SensorState sensorStateOut;
-PosState posStateOut;
+PosStateOut posStateOut;
 PlatformState platformStateOut;
 TotalState totalStateOut;
 WhisperState whisperStateOut;
@@ -581,14 +587,14 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             chatIn_pub->publish(chatIn);
                         break;
                         case SetPos:
-                            static PosState posStateIn, posStateInPre;
+                            static PosStateIn posStateIn, posStateInPre;
                             memcpy(&posStateIn, buffer+COMMAND_SIZE, sizeof(posStateIn));
 
                             #if ACK_OK
-                            static PosState *psi = &posStateIn;
-                            if (psi->x == 0.0 && psi->y == 0.0 && psi->rz == 0.0 && psi->ang == 0.0) {
+                            static PosStateIn *psi = &posStateIn;
+                            if (psi->x == 0.0 && psi->y == 0.0 && psi->rz == 0.0) {
                                 printf("Request SetPos, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                                printf("pos.x: %.3lf, pos.y: %.3lf, pos.theta: %.3lf, pos.ang: %.3lf\n", posStateInPre.x, posStateInPre.y, posStateInPre.rz, posStateInPre.ang);
+                                printf("pos.x: %.3lf, pos.y: %.3lf, pos.theta: %.3lf\n", posStateInPre.x, posStateInPre.y, posStateInPre.rz);
 
                                 byte_size = sizeof(command) + sizeof(posStateIn);
                                 u8_ptr = (char*)&byte_size;
@@ -601,7 +607,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                                 send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(posStateInPre), 0);
                             } else {
                                 printf("Receviced SetPos, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                                printf("pos.x: %.3lf, pos.y: %.3lf, pos.theta: %.3lf, pos.ang: %.3lf\n", posStateIn.x, posStateIn.y, posStateIn.rz, posStateIn.ang);
+                                printf("pos.x: %.3lf, pos.y: %.3lf, pos.theta: %.3lf\n", posStateIn.x, posStateIn.y, posStateIn.rz);
 
                                 memcpy((char*)&posStateInPre, (char*)&posStateIn, sizeof(posStateIn));
                             }
@@ -620,7 +626,6 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                             chatIn.posParam.posState.x = posStateIn.x;
                             chatIn.posParam.posState.y = posStateIn.y;
                             chatIn.posParam.posState.rz = posStateIn.rz;
-                            chatIn.posParam.posState.ang = posStateIn.ang;
 
                             chatIn.posParam.velParams.x.acc = posVelParamsIn.x.acc;
                             chatIn.posParam.velParams.y.acc = posVelParamsIn.y.acc;
@@ -980,7 +985,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
             }
 
             #if 0
-            static PosState posStateTest = {0.0, 10.0, 0.0, 0.0};
+            static PosStateOut posStateTest = {0.0, 10.0, 0.0, 0.0};
             #if 1
             #define SEND_PERIOD_MS	10
             if (SEND_PERIOD_MS <= (ts_now-ts_dummy)) {

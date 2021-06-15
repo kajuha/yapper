@@ -1,2 +1,2 @@
-PosState posState
+PosStateIn posState
 VelParams velParams

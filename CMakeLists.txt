@@ -51,7 +51,8 @@ find_package(catkin REQUIRED COMPONENTS
    FILES
    VelParam.msg
    VelParams.msg
-   PosState.msg
+   PosStateIn.msg
+   PosStateOut.msg
    JogInfo.msg
    JogParam.msg
    PosParam.msg
