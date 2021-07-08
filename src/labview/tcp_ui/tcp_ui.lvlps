@@ -1,18 +1,18 @@
 [ProjectWindow_Data]
-ProjectExplorer.ClassicPosition[String] = "147,3442,547,3754"
+ProjectExplorer.ClassicPosition[String] = "147,1608,547,1920"
 
 [프로젝트 윈도우_데이터]
 ProjectExplorer.ClassicPosition[String] = "190,-1339,590,-841"
-
-[AB_Cache_{77B7CC19-B585-11EB-91FF-B4A9FCDF48BD}]
-Cache_Path[Path] = "/tmp/AB_Cache_{77B7CC19-B585-11EB-91FF-B4A9FCDF48BD}.txt"
-
-[AB_Cache_{77B7CC5C-B585-11EB-91FF-B4A9FCDF48BD}]
-Cache_Path[Path] = "/tmp/AB_Cache_{77B7CC5C-B585-11EB-91FF-B4A9FCDF48BD}.txt"
 
 [AB_Cache_{BB5F50B8-C4F5-11EB-91FF-B4A9FCDF48BD}]
 Cache_Path[Path] = "/tmp/AB_Cache_{BB5F50B8-C4F5-11EB-91FF-B4A9FCDF48BD}.txt"
 
 [AB_Cache_{BB5F421C-C4F5-11EB-91FF-B4A9FCDF48BD}]
 Cache_Path[Path] = "/tmp/AB_Cache_{BB5F421C-C4F5-11EB-91FF-B4A9FCDF48BD}.txt"
+
+[AB_Cache_{77B7CC19-B585-11EB-91FF-B4A9FCDF48BD}]
+Cache_Path[Path] = "/tmp/AB_Cache_{77B7CC19-B585-11EB-91FF-B4A9FCDF48BD}.txt"
+
+[AB_Cache_{77B7CC5C-B585-11EB-91FF-B4A9FCDF48BD}]
+Cache_Path[Path] = "/tmp/AB_Cache_{77B7CC5C-B585-11EB-91FF-B4A9FCDF48BD}.txt"
 
