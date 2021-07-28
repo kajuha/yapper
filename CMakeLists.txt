@@ -156,6 +156,7 @@ add_executable(chatterbox src/main.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(chatterbox chatterbox_generate_messages_cpp)
+add_dependencies(chatterbox ${PROJECT_NAME}_generate_messages_cpp)
 # add_dependencies(chatterbox ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
