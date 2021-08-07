@@ -5,9 +5,9 @@
 
 #include <string>
 
-#include "chatterbox/ChatIn.h"
-#include "chatterbox/ChatOut.h"
-#include "chatterbox/WhisperOut.h"
+#include "yapper/ChatIn.h"
+#include "yapper/ChatOut.h"
+#include "yapper/WhisperOut.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -190,13 +190,13 @@ void sigint_handler(int sig) {
 	clientOpen = 0;
 }
 
-chatterbox::ChatOut chatOut_;
-void chatOutCallBack(const chatterbox::ChatOut chatOut) {
+yapper::ChatOut chatOut_;
+void chatOutCallBack(const yapper::ChatOut chatOut) {
     chatOut_ = chatOut;
 }
 
-chatterbox::WhisperOut whisperOut_;
-void whisperOutCallBack(const chatterbox::WhisperOut whisperOut) {
+yapper::WhisperOut whisperOut_;
+void whisperOutCallBack(const yapper::WhisperOut whisperOut) {
     whisperOut_ = whisperOut;
 }
 
@@ -204,7 +204,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
     ros::NodeHandlePtr node = boost::make_shared<ros::NodeHandle>();
     ros::Rate rate(*thread_rate);
 
-    chatterbox::ChatIn chatIn;
+    yapper::ChatIn chatIn;
 
     struct sockaddr_in addr, client_addr;
     #define BUF_SIZE	1024
@@ -1307,13 +1307,13 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "chatterbox");
+    ros::init(argc, argv, "yapper");
     ros::NodeHandle nh("~");
     
-    ros::Subscriber chatOut_sub = nh.subscribe("/chatterbox/chatOut_topic", 100, chatOutCallBack);
-    ros::Subscriber whisperOut_sub = nh.subscribe("/chatterbox/whisperOut_topic", 100, whisperOutCallBack);
+    ros::Subscriber chatOut_sub = nh.subscribe("/yapper/chatOut_topic", 100, chatOutCallBack);
+    ros::Subscriber whisperOut_sub = nh.subscribe("/yapper/whisperOut_topic", 100, whisperOutCallBack);
     
-    ros::Publisher chatIn_pub = nh.advertise<chatterbox::ChatIn>("chatIn_topic", 100);
+    ros::Publisher chatIn_pub = nh.advertise<yapper::ChatIn>("chatIn_topic", 100);
 
     int thread_rate = 200;
     boost::thread hThread(fThread, &thread_rate, &chatIn_pub);

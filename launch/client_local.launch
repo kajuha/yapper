@@ -2,6 +2,6 @@
     <arg name="user_name" default="recipelab" doc="user name"/>
     
     <node pkg="aliencontrol" type="aliencontrol" name="aliencontrol_tcp_ui">
-        <param name="cmd" value="sh -c '/home/$(arg user_name)/catkin_ws/src/chatterbox/builds/executable/tcp_ui.exe 127.0.0.1 10200;'"/>
+        <param name="cmd" value="sh -c '/home/$(arg user_name)/catkin_ws/src/yapper/builds/executable/tcp_ui.exe 127.0.0.1 10200;'"/>
     </node>
 </launch>
