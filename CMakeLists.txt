@@ -49,19 +49,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
  add_message_files(
    FILES
-   VelParam.msg
-   VelParams.msg
-   PosStateIn.msg
-   PosStateOut.msg
    JogInfo.msg
-   JogParam.msg
-   PosParam.msg
-   SensorState.msg
-   PlatformState.msg
-   ChatOut.msg
-   ChatIn.msg
-   CustomValue.msg
-   WhisperOut.msg
+   YapIn.msg
  )
 
 ## Generate services in the 'srv' folder

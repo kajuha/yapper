@@ -1,6 +1,6 @@
-uint32 front
-uint32 back
-uint32 left
-uint32 right
-uint32 cw
-uint32 ccw
+uint32 x_p
+uint32 x_n
+uint32 y_p
+uint32 y_n
+uint32 z_p
+uint32 z_n

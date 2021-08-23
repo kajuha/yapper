@@ -5,9 +5,7 @@
 
 #include <string>
 
-#include "yapper/ChatIn.h"
-#include "yapper/ChatOut.h"
-#include "yapper/WhisperOut.h"
+#include <yapper/YapIn.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -27,121 +25,15 @@
 #define OFF                 0
 #define TCP_DUMMY_SEND      OFF
 
-// 센서 종류
-uint32_t sensor;
-
-// 플랫폼 위치 파라미터
-typedef struct _PosStateIn {
-	double x;	// unit: m
-	double y;	// unit: m
-	double rz;	// unit: deg
-} PosStateIn;
-
-typedef struct _PosStateOut {
-	double x;	// unit: m
-	double y;	// unit: m
-	double rz;	// unit: deg
-	double ang;	// unit: deg
-} PosStateOut;
-
-// 속도 파라미터
-typedef struct _VelParam {
-	double vel;		// unit: m/s
-	double acc;		// unit: m/s^2
-	double vmax;	// unit: m/s
-} VelParam;
-
-// 플랫폼 속도 파라미터
-typedef struct _VelParams {
-	VelParam x;
-	VelParam y;
-	VelParam rz;
-} VelParams;
-
 // 조그 정보
 typedef struct _JogInfo {
-	uint32_t front;	// push: 1, release: 0
-	uint32_t back;	// push: 1, release: 0
-	uint32_t left;	// push: 1, release: 0
-	uint32_t right;	// push: 1, release: 0
-	uint32_t cw;	// push: 1, release: 0
-	uint32_t ccw;	// push: 1, release: 0
+	uint32_t x_p;	// push: 1, release: 0
+	uint32_t x_n;	// push: 1, release: 0
+	uint32_t y_p;	// push: 1, release: 0
+	uint32_t y_n;	// push: 1, release: 0
+	uint32_t z_p;	// push: 1, release: 0
+	uint32_t z_n;	// push: 1, release: 0
 } JogInfo;
-
-// 정지 정보
-typedef struct _StopInfo {
-	uint32_t stop;
-} StopInfo;
-
-// 상태입력 정보
-typedef struct _StateInfo {
-	uint32_t period;
-} StateInfo;
-
-// 센서 정보
-typedef struct _SensorState {
-	double front;		// m
-	double back;		// m
-	double right_front;	// m
-	double right_back;	// m
-} SensorState;
-
-// 플랫폼 정보
-typedef struct _PlatformState {
-    uint32_t mode;
-	uint32_t state;
-} PlatformState;
-
-// 총 정보
-#pragma pack(push, 1)
-typedef struct _TotalState {
-	SensorState sensor;
-	PosStateOut pos;
-	PlatformState platform;
-} TotalState;
-#pragma pack(pop)
-
-// 상세메시지정보
-struct CustomString {
-#define SUBJECT_SIZE    16
-    unsigned char subject[SUBJECT_SIZE];
-    double value;
-};
-
-#pragma pack(push, 1)
-struct WhisperState {
-    CustomString val00;
-    CustomString val01;
-    CustomString val02;
-    CustomString val03;
-    CustomString val04;
-    CustomString val05;
-    CustomString val06;
-    CustomString val07;
-    CustomString val08;
-    CustomString val09;
-    CustomString val10;
-    CustomString val11;
-    CustomString val12;
-    CustomString val13;
-    CustomString val14;
-    CustomString val15;
-    CustomString val16;
-    CustomString val17;
-    CustomString val18;
-    CustomString val19;
-    CustomString val20;
-    CustomString val21;
-    CustomString val22;
-    CustomString val23;
-    CustomString val24;
-    CustomString val25;
-    CustomString val26;
-    CustomString val27;
-    CustomString val28;
-    CustomString val29;
-};
-#pragma pack(pop)
 
 // 명령어 종류
 typedef enum _Command {
@@ -157,18 +49,6 @@ typedef enum _Command {
     GetWhisper=16,
     SetSensor=17
 } Command;
-
-SensorState sensorStateOut;
-PosStateOut posStateOut;
-PlatformState platformStateOut;
-TotalState totalStateOut;
-WhisperState whisperStateOut;
-
-StateInfo totalState;
-StateInfo platformState;
-StateInfo sensorState;
-StateInfo posState;
-StateInfo whisperState;
 
 int sock, client_sock;
 
@@ -190,21 +70,11 @@ void sigint_handler(int sig) {
 	clientOpen = 0;
 }
 
-yapper::ChatOut chatOut_;
-void chatOutCallBack(const yapper::ChatOut chatOut) {
-    chatOut_ = chatOut;
-}
-
-yapper::WhisperOut whisperOut_;
-void whisperOutCallBack(const yapper::WhisperOut whisperOut) {
-    whisperOut_ = whisperOut;
-}
-
-void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
+void fThread(int* thread_rate, ros::Publisher *yapIn_pub) {
     ros::NodeHandlePtr node = boost::make_shared<ros::NodeHandle>();
     ros::Rate rate(*thread_rate);
 
-    yapper::ChatIn chatIn;
+    yapper::YapIn yapIn;
 
     struct sockaddr_in addr, client_addr;
     #define BUF_SIZE	1024
@@ -315,18 +185,6 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
         char *u8_ptr;
         int byte_size;
 
-        // 통신 데이터 입력
-        memset((char*)&totalState, '\0', sizeof(totalState));
-        memset((char*)&sensorState, '\0', sizeof(sensorState));
-        memset((char*)&platformState, '\0', sizeof(platformState));
-        memset((char*)&posState, '\0', sizeof(posState));
-
-        // 통신 데이터 출력
-        memset((char*)&sensorStateOut, '\0', sizeof(sensorStateOut));
-        memset((char*)&posStateOut, '\0', sizeof(posStateOut));
-        memset((char*)&platformStateOut, '\0', sizeof(platformStateOut));
-        memset((char*)&totalStateOut, '\0', sizeof(totalStateOut));
-
         printf("readWriteInfinite while start (%d line)\n", __LINE__);
         // 통신
         while (readWriteInfinite && ros::ok()) {
@@ -402,569 +260,41 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
                         case None:
                             printf("None command\n");
                         break;
-                        case Stop:
-                            StopInfo stopInfoIn;
-                            printf("Receviced StopInfoIn, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            memcpy(&stopInfoIn, buffer+COMMAND_SIZE, sizeof(stopInfoIn));
-                            printf("stop: %d\n", stopInfoIn.stop);
-                            platformStateOut.mode = Stop;
-
-                            now = ros::Time::now();
-                            chatIn.header.stamp = now;
-
-                            chatIn.command = platformStateOut.mode;
-
-                            chatIn_pub->publish(chatIn);
-                        break;
-                        case Estop:
-                            printf("Receviced Estop, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            platformStateOut.mode = Estop;
-
-                            now = ros::Time::now();
-                            chatIn.header.stamp = now;
-
-                            chatIn.command = platformStateOut.mode;
-
-                            chatIn_pub->publish(chatIn);
-                        break;
-                        case SetPosMode:
-                            printf("Receviced SetPosMode, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            platformStateOut.mode = SetPosMode;
-
-                            now = ros::Time::now();
-                            chatIn.header.stamp = now;
-
-                            chatIn.command = platformStateOut.mode;
-
-                            // chatIn_pub->publish(chatIn);
-                        break;
-                        case SetJogMode:
-                            printf("Receviced SetJogMode, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            platformStateOut.mode = SetJogMode;
-
-                            now = ros::Time::now();
-                            chatIn.header.stamp = now;
-
-                            chatIn.command = platformStateOut.mode;
-
-                            // chatIn_pub->publish(chatIn);
-                        break;
-                        case SetControlMode:
-                            static uint32_t controlMode, controlModePre;
-                            memcpy((char*)&controlMode, buffer+COMMAND_SIZE, sizeof(controlMode));
-
-                            #if ACK_OK
-                            if (controlMode == 0) {
-                                printf("Request SetControlMode, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                                printf("mode: %d\n", controlModePre);
-
-                                byte_size = sizeof(command) + sizeof(controlMode);
-                                u8_ptr = (char*)&byte_size;
-                                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                                u8_ptr = (char*)&command;
-                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                                u8_ptr = (char*)&controlModePre;
-                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(controlModePre));
-                                buffer[ACK_IDX] = ACK_RES;
-                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(controlModePre), 0);
-                            } else {
-                                printf("Receviced SetControlMode, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                                printf("mode: %d\n", controlMode);
-
-                                controlModePre = controlMode;
-                                platformStateOut.mode = controlMode;
-
-                                now = ros::Time::now();
-                                chatIn.header.stamp = now;
-
-                                chatIn.command = platformStateOut.mode;
-
-                                // chatIn_pub->publish(chatIn);
-                            }
-                            #endif
-                        break;
-                        case SetJogParam:
-                            static VelParams jogVelParamsIn, jogVelParamsInPre;
-                            memcpy(&jogVelParamsIn, buffer+COMMAND_SIZE, sizeof(jogVelParamsIn));
-
-                            #if ACK_OK
-                            static VelParams *jvpi = &jogVelParamsIn;
-                            if (jvpi->x.vel == 0.0 && jvpi->x.acc == 0.0 && jvpi->x.vmax == 0.0 &&
-                                jvpi->y.vel == 0.0 && jvpi->y.acc == 0.0 && jvpi->y.vmax == 0.0 &&
-                                jvpi->rz.vel == 0.0 && jvpi->rz.acc == 0.0 && jvpi->rz.vmax == 0.0) {
-                                printf("Request SetJogParam, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                                printf("x.v: %.3lf, x.a: %.3lf, x.vm: %.3lf, y.v: %.3lf, y.a: %.3lf, y.vm: %.3lf, z.v: %.3lf, z.a: %.3lf, z.vm: %.3lf\n",
-                                    jogVelParamsInPre.x.vel, jogVelParamsInPre.x.acc, jogVelParamsInPre.x.vmax,
-                                    jogVelParamsInPre.y.vel, jogVelParamsInPre.y.acc, jogVelParamsInPre.y.vmax,
-                                    jogVelParamsInPre.rz.vel, jogVelParamsInPre.rz.acc, jogVelParamsInPre.rz.vmax);
-
-                                byte_size = sizeof(command) + sizeof(jogVelParamsIn);
-                                u8_ptr = (char*)&byte_size;
-                                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                                u8_ptr = (char*)&command;
-                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                                u8_ptr = (char*)&jogVelParamsInPre;
-                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(jogVelParamsInPre));
-                                buffer[ACK_IDX] = ACK_RES;
-                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(jogVelParamsInPre), 0);
-                            } else {
-                                printf("Receviced SetJogParam, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                                printf("x.v: %.3lf, x.a: %.3lf, x.vm: %.3lf, y.v: %.3lf, y.a: %.3lf, y.vm: %.3lf, z.v: %.3lf, z.a: %.3lf, z.vm: %.3lf\n",
-                                    jogVelParamsIn.x.vel, jogVelParamsIn.x.acc, jogVelParamsIn.x.vmax,
-                                    jogVelParamsIn.y.vel, jogVelParamsIn.y.acc, jogVelParamsIn.y.vmax,
-                                    jogVelParamsIn.rz.vel, jogVelParamsIn.rz.acc, jogVelParamsIn.rz.vmax);
-
-                                memcpy((char*)&jogVelParamsInPre, (char*)&jogVelParamsIn, sizeof(jogVelParamsIn));
-                            }
-                            #endif
-                        break;
-                        case SetPosParam:
-                            static VelParams posVelParamsIn, posVelParamsInPre;
-                            memcpy(&posVelParamsIn, buffer+COMMAND_SIZE, sizeof(posVelParamsIn));
-
-                            #if ACK_OK
-                            static VelParams *pvpi = &posVelParamsIn;
-                            if (pvpi->x.vel == 0.0 && pvpi->x.acc == 0.0 && pvpi->x.vmax == 0.0 &&
-                                pvpi->y.vel == 0.0 && pvpi->y.acc == 0.0 && pvpi->y.vmax == 0.0 &&
-                                pvpi->rz.vel == 0.0 && pvpi->rz.acc == 0.0 && pvpi->rz.vmax == 0.0) {
-                                printf("Request SetPosParam, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                                printf("x.v: %.3lf, x.a: %.3lf, x.vm: %.3lf, y.v: %.3lf, y.a: %.3lf, y.vm: %.3lf, z.v: %.3lf, z.a: %.3lf, z.vm: %.3lf\n",
-                                    posVelParamsInPre.x.vel, posVelParamsInPre.x.acc, posVelParamsInPre.x.vmax,
-                                    posVelParamsInPre.y.vel, posVelParamsInPre.y.acc, posVelParamsInPre.y.vmax,
-                                    posVelParamsInPre.rz.vel, posVelParamsInPre.rz.acc, posVelParamsInPre.rz.vmax);
-
-                                byte_size = sizeof(command) + sizeof(posVelParamsIn);
-                                u8_ptr = (char*)&byte_size;
-                                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                                u8_ptr = (char*)&command;
-                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                                u8_ptr = (char*)&posVelParamsInPre;
-                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(posVelParamsInPre));
-                                buffer[ACK_IDX] = ACK_RES;
-                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(posVelParamsInPre), 0);
-                            } else {
-                                printf("Receviced SetPosParam, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                                printf("x.v: %.3lf, x.a: %.3lf, x.vm: %.3lf, y.v: %.3lf, y.a: %.3lf, y.vm: %.3lf, z.v: %.3lf, z.a: %.3lf, z.vm: %.3lf\n",
-                                    posVelParamsIn.x.vel, posVelParamsIn.x.acc, posVelParamsIn.x.vmax,
-                                    posVelParamsIn.y.vel, posVelParamsIn.y.acc, posVelParamsIn.y.vmax,
-                                    posVelParamsIn.rz.vel, posVelParamsIn.rz.acc, posVelParamsIn.rz.vmax);
-
-                                memcpy((char*)&posVelParamsInPre, (char*)&posVelParamsIn, sizeof(posVelParamsIn));
-                            }
-                            #endif
-                        break;
                         case SetJogState:
                             JogInfo jogInfoIn;
                             memcpy(&jogInfoIn, buffer+COMMAND_SIZE, sizeof(jogInfoIn));
                             printf("Receviced SetJogState, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            printf("f: %d, r: %d, l: %d, r: %d, cw: %d, ccw: %d\n",
-                                jogInfoIn.front, jogInfoIn.back, jogInfoIn.left, jogInfoIn.right, jogInfoIn.cw, jogInfoIn.ccw);
+                            printf("x_p: %d, x_n: %d, y_p: %d, y_n: %d, z_p: %d, z_n: %d\n",
+                                jogInfoIn.x_p, jogInfoIn.x_n, jogInfoIn.y_p, jogInfoIn.y_n, jogInfoIn.z_p, jogInfoIn.z_n);
 
                             now = ros::Time::now();
-                            chatIn.header.stamp = now;
-
-                            chatIn.command = platformStateOut.mode;
-
-                            chatIn.sensor = sensor;
+                            yapIn.header.stamp = now;
                             
-                            chatIn.jogParam.jogInfo.front = jogInfoIn.front;
-                            chatIn.jogParam.jogInfo.back = jogInfoIn.back;
-                            chatIn.jogParam.jogInfo.left = jogInfoIn.left;
-                            chatIn.jogParam.jogInfo.right = jogInfoIn.right;
-                            chatIn.jogParam.jogInfo.cw = jogInfoIn.cw;
-                            chatIn.jogParam.jogInfo.ccw = jogInfoIn.ccw;
+                            yapIn.jogInfo.x_p = jogInfoIn.x_p;
+                            yapIn.jogInfo.x_n = jogInfoIn.x_n;
+                            yapIn.jogInfo.y_p = jogInfoIn.y_p;
+                            yapIn.jogInfo.y_n = jogInfoIn.y_n;
+                            yapIn.jogInfo.z_p = jogInfoIn.z_p;
+                            yapIn.jogInfo.z_n = jogInfoIn.z_n;
 
-                            chatIn.jogParam.velParams.x.acc = jogVelParamsIn.x.acc;
-                            chatIn.jogParam.velParams.y.acc = jogVelParamsIn.y.acc;
-                            chatIn.jogParam.velParams.rz.acc = jogVelParamsIn.rz.acc;
-                            chatIn.jogParam.velParams.x.vel = jogVelParamsIn.x.vel;
-                            chatIn.jogParam.velParams.y.vel = jogVelParamsIn.y.vel;
-                            chatIn.jogParam.velParams.rz.vel = jogVelParamsIn.rz.vel;
-                            chatIn.jogParam.velParams.x.vmax =jogVelParamsIn.x.vmax;
-                            chatIn.jogParam.velParams.y.vmax =jogVelParamsIn.y.vmax;
-                            chatIn.jogParam.velParams.rz.vmax =jogVelParamsIn.rz.vmax;
-
-                            chatIn_pub->publish(chatIn);
+                            yapIn_pub->publish(yapIn);
                         break;
+                        case Stop:
+                        case Estop:
+                        case SetPosMode:
+                        case SetJogMode:
+                        case SetControlMode:
+                        case SetJogParam:
+                        case SetPosParam:
                         case SetPos:
-                            static PosStateIn posStateIn, posStateInPre;
-                            memcpy(&posStateIn, buffer+COMMAND_SIZE, sizeof(posStateIn));
-
-                            #if ACK_OK
-                            static PosStateIn *psi = &posStateIn;
-                            if (psi->x == 0.0 && psi->y == 0.0 && psi->rz == 0.0) {
-                                printf("Request SetPos, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                                printf("pos.x: %.3lf, pos.y: %.3lf, pos.theta: %.3lf\n", posStateInPre.x, posStateInPre.y, posStateInPre.rz);
-
-                                byte_size = sizeof(command) + sizeof(posStateIn);
-                                u8_ptr = (char*)&byte_size;
-                                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                                u8_ptr = (char*)&command;
-                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                                u8_ptr = (char*)&posStateInPre;
-                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(posStateInPre));
-                                buffer[ACK_IDX] = ACK_RES;
-                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(posStateInPre), 0);
-                            } else {
-                                printf("Receviced SetPos, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                                printf("pos.x: %.3lf, pos.y: %.3lf, pos.theta: %.3lf\n", posStateIn.x, posStateIn.y, posStateIn.rz);
-
-                                memcpy((char*)&posStateInPre, (char*)&posStateIn, sizeof(posStateIn));
-                            }
-                            #endif
-                        break;
                         case StartPosControl:
-                            printf("Receviced StartPosControl, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-
-                            now = ros::Time::now();
-                            chatIn.header.stamp = now;
-
-                            chatIn.command = platformStateOut.mode;
-
-                            chatIn.sensor = sensor;
-
-                            chatIn.posParam.posState.x = posStateIn.x;
-                            chatIn.posParam.posState.y = posStateIn.y;
-                            chatIn.posParam.posState.rz = posStateIn.rz;
-
-                            chatIn.posParam.velParams.x.acc = posVelParamsIn.x.acc;
-                            chatIn.posParam.velParams.y.acc = posVelParamsIn.y.acc;
-                            chatIn.posParam.velParams.rz.acc = posVelParamsIn.rz.acc;
-                            chatIn.posParam.velParams.x.vel = posVelParamsIn.x.vel;
-                            chatIn.posParam.velParams.y.vel = posVelParamsIn.y.vel;
-                            chatIn.posParam.velParams.rz.vel = posVelParamsIn.rz.vel;
-                            chatIn.posParam.velParams.x.vmax = posVelParamsIn.x.vmax;
-                            chatIn.posParam.velParams.y.vmax = posVelParamsIn.y.vmax;
-                            chatIn.posParam.velParams.rz.vmax = posVelParamsIn.rz.vmax;
-
-                            chatIn_pub->publish(chatIn);
-                        break;
                         case GetTotal:
-                            printf("Receviced GetTotal, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            memcpy(&totalState, buffer+COMMAND_SIZE, sizeof(StateInfo));
-                            printf("period: %d\n", totalState.period);
-
-                            printf("ts_total_once time diff(ms) : %ld\n", ts_now-ts_total_once);
-                            ts_total_once = ts_now;
-
-                            if (totalState.period == 0) {
-                            // 전체 송신할 바이트 계산
-                                #if TCP_DUMMY_SEND                                
-                                totalStateOut.sensor.front += 1;
-                                totalStateOut.sensor.back += 2;
-                                totalStateOut.sensor.right_front += 3;
-                                totalStateOut.sensor.right_back += 4;
-
-                                totalStateOut.pos.x += 5;
-                                totalStateOut.pos.y += 6;
-                                totalStateOut.pos.rz += 7;
-                                totalStateOut.pos.ang += 8;
-
-                                totalStateOut.platform.mode += 8;
-                                totalStateOut.platform.state += 9;
-                                #else
-                                totalStateOut.sensor.front = chatOut_.sensorState.front;
-                                totalStateOut.sensor.back = chatOut_.sensorState.back;
-                                totalStateOut.sensor.right_front = chatOut_.sensorState.right_front;
-                                totalStateOut.sensor.right_back = chatOut_.sensorState.right_back;
-                                
-                                totalStateOut.pos.x = chatOut_.posState.x;
-                                totalStateOut.pos.y = chatOut_.posState.y;
-                                totalStateOut.pos.rz = chatOut_.posState.rz;
-                                totalStateOut.pos.ang = chatOut_.posState.ang;
-
-                                totalStateOut.platform.mode = chatOut_.platformState.mode;
-                                totalStateOut.platform.state = chatOut_.platformState.state; 
-                                #endif
-
-                                #if 0
-                                byte_size = sizeof(command) + sizeof(totalStateOut);
-                                u8_ptr = (char*)&byte_size;
-                                send(client_sock, u8_ptr, sizeof(byte_size), 0);
-                                u8_ptr = (char*)&command;
-                                send(client_sock, u8_ptr, sizeof(command), 0);
-                                u8_ptr = (char*)&totalStateOut;
-                                send(client_sock, u8_ptr, sizeof(totalStateOut), 0);
-                                #else							
-                                byte_size = sizeof(command) + sizeof(totalStateOut);
-                                u8_ptr = (char*)&byte_size;
-                                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                                u8_ptr = (char*)&command;
-                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                                u8_ptr = (char*)&totalStateOut;
-                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(totalStateOut));
-                                buffer[ACK_IDX] = ACK_ONE;
-                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(totalStateOut), 0);
-                                #endif
-                            } else {
-                            }
-                        break;
                         case GetPlatform:
-                            printf("Receviced GetPlatform, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            memcpy(&platformState, buffer+COMMAND_SIZE, sizeof(StateInfo));
-                            printf("period: %d\n", platformState.period);
-
-                            if (platformState.period == 0) {
-                                // 전체 송신할 바이트 계산
-                                #if TCP_DUMMY_SEND
-                                platformStateOut.mode += 1;
-                                platformStateOut.state += 2;
-                                #else
-                                platformStateOut.mode = chatOut_.platformState.mode;
-                                platformStateOut.state = chatOut_.platformState.state; 
-                                #endif
-
-                                #if 0
-                                byte_size = sizeof(command) + sizeof(platformStateOut);
-                                u8_ptr = (char*)&byte_size;
-                                send(client_sock, u8_ptr, sizeof(byte_size), 0);
-                                u8_ptr = (char*)&command;
-                                send(client_sock, u8_ptr, sizeof(command), 0);
-                                u8_ptr = (char*)&platformStateOut;
-                                send(client_sock, u8_ptr, sizeof(platformStateOut), 0);
-                                #else							
-                                byte_size = sizeof(command) + sizeof(platformStateOut);
-                                u8_ptr = (char*)&byte_size;
-                                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                                u8_ptr = (char*)&command;
-                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                                u8_ptr = (char*)&platformStateOut;
-                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(platformStateOut));
-                                buffer[ACK_IDX] = ACK_ONE;
-                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(platformStateOut), 0);
-                                #endif
-                            } else {
-                            }
-                        break;
                         case GetSensor:
-                            printf("Receviced GetSensor, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            memcpy(&sensorState, buffer+COMMAND_SIZE, sizeof(StateInfo));
-                            printf("period: %d\n", sensorState.period);
-
-                            if (sensorState.period == 0) {
-                                // 전체 송신할 바이트 계산
-                                #if TCP_DUMMY_SEND
-                                sensorStateOut.front += 1;
-                                sensorStateOut.back += 2;
-                                sensorStateOut.right_front += 3;
-                                sensorStateOut.right_back += 4;
-                                #else
-                                sensorStateOut.front = chatOut_.sensorState.front;
-                                sensorStateOut.back = chatOut_.sensorState.back;
-                                sensorStateOut.right_front = chatOut_.sensorState.right_front;
-                                sensorStateOut.right_back = chatOut_.sensorState.right_back;
-                                #endif
-
-                                #if 0
-                                byte_size = sizeof(command) + sizeof(sensorStateOut);
-                                u8_ptr = (char*)&byte_size;
-                                send(client_sock, u8_ptr, sizeof(byte_size), 0);
-                                u8_ptr = (char*)&command;
-                                send(client_sock, u8_ptr, sizeof(command), 0);
-                                u8_ptr = (char*)&sensorStateOut;
-                                send(client_sock, u8_ptr, sizeof(sensorStateOut), 0);
-                                #else							
-                                byte_size = sizeof(command) + sizeof(sensorStateOut);
-                                u8_ptr = (char*)&byte_size;
-                                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                                u8_ptr = (char*)&command;
-                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                                u8_ptr = (char*)&sensorStateOut;
-                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(sensorStateOut));
-                                buffer[ACK_IDX] = ACK_ONE;
-                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(sensorStateOut), 0);
-                                #endif
-                            } else {
-                            }
-                        break;
                         case GetPos:
-                            printf("Receviced GetPos, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            memcpy(&posState, buffer+COMMAND_SIZE, sizeof(StateInfo));
-                            printf("period: %d\n", posState.period);
-
-                            if (posState.period == 0) {
-                                // 전체 송신할 바이트 계산
-                                #if TCP_DUMMY_SEND
-                                posStateOut.x += 1;
-                                posStateOut.y += 2;
-                                posStateOut.rz += 3;
-                                posStateOut.ang += 4;
-                                #else
-                                posStateOut.x = chatOut_.posState.x;
-                                posStateOut.y = chatOut_.posState.y;
-                                posStateOut.rz = chatOut_.posState.rz;
-                                posStateOut.ang = chatOut_.posState.ang;
-                                #endif
-
-                                #if 0
-                                byte_size = sizeof(command) + sizeof(posStateOut);
-                                u8_ptr = (char*)&byte_size;
-                                send(client_sock, u8_ptr, sizeof(byte_size), 0);
-                                u8_ptr = (char*)&command;
-                                send(client_sock, u8_ptr, sizeof(command), 0);
-                                u8_ptr = (char*)&posStateOut;
-                                send(client_sock, u8_ptr, sizeof(posStateOut), 0);
-                                #else
-                                byte_size = sizeof(command) + sizeof(posStateOut);
-                                u8_ptr = (char*)&byte_size;
-                                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                                u8_ptr = (char*)&command;
-                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                                u8_ptr = (char*)&posStateOut;
-                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(posStateOut));
-                                buffer[ACK_IDX] = ACK_ONE;
-                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(posStateOut), 0);
-                                #endif
-                            } else {
-                            }
-                        break;
                         case InitPlatform:
-                            printf("Receviced InitPlatform, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            platformStateOut.mode = InitPlatform;
-
-                            now = ros::Time::now();
-                            chatIn.header.stamp = now;
-
-                            chatIn.command = platformStateOut.mode;
-
-                            chatIn_pub->publish(chatIn);
-                        break;
                         case GetWhisper:
-                            printf("Receviced GetWhisper, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            memcpy(&whisperState, buffer+COMMAND_SIZE, sizeof(StateInfo));
-                            printf("period: %d\n", whisperState.period);
-
-                            if (whisperState.period == 0) {
-                                // 전체 송신할 바이트 계산
-                                #if TCP_DUMMY_SEND
-                                whisperOut_.val00.subject = "val00val00val00val00";
-                                memset(whisperStateOut.val00.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val00.subject, whisperOut_.val00.subject.c_str(), whisperOut_.val00.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val00.subject.length());
-                                whisperStateOut.val00.value += 1;
-                                whisperOut_.val19.subject = "val19val19val19val19";
-                                memset(whisperStateOut.val19.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val19.subject, whisperOut_.val19.subject.c_str(), whisperOut_.val19.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val19.subject.length());
-                                whisperStateOut.val19.value += 2;
-                                #else
-                                memset(whisperStateOut.val00.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val00.subject, whisperOut_.val00.subject.c_str(), whisperOut_.val00.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val00.subject.length());
-                                whisperStateOut.val00.value = whisperOut_.val00.value;                
-                                memset(whisperStateOut.val01.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val01.subject, whisperOut_.val01.subject.c_str(), whisperOut_.val01.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val01.subject.length());
-                                whisperStateOut.val01.value = whisperOut_.val01.value;                
-                                memset(whisperStateOut.val02.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val02.subject, whisperOut_.val02.subject.c_str(), whisperOut_.val02.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val02.subject.length());
-                                whisperStateOut.val02.value = whisperOut_.val02.value;                
-                                memset(whisperStateOut.val03.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val03.subject, whisperOut_.val03.subject.c_str(), whisperOut_.val03.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val03.subject.length());
-                                whisperStateOut.val03.value = whisperOut_.val03.value;                
-                                memset(whisperStateOut.val04.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val04.subject, whisperOut_.val04.subject.c_str(), whisperOut_.val04.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val04.subject.length());
-                                whisperStateOut.val04.value = whisperOut_.val04.value;                
-                                memset(whisperStateOut.val05.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val05.subject, whisperOut_.val05.subject.c_str(), whisperOut_.val05.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val05.subject.length());
-                                whisperStateOut.val05.value = whisperOut_.val05.value;                
-                                memset(whisperStateOut.val06.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val06.subject, whisperOut_.val06.subject.c_str(), whisperOut_.val06.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val06.subject.length());
-                                whisperStateOut.val06.value = whisperOut_.val06.value;                
-                                memset(whisperStateOut.val07.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val07.subject, whisperOut_.val07.subject.c_str(), whisperOut_.val07.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val07.subject.length());
-                                whisperStateOut.val07.value = whisperOut_.val07.value;                
-                                memset(whisperStateOut.val08.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val08.subject, whisperOut_.val08.subject.c_str(), whisperOut_.val08.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val08.subject.length());
-                                whisperStateOut.val08.value = whisperOut_.val08.value;                
-                                memset(whisperStateOut.val09.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val09.subject, whisperOut_.val09.subject.c_str(), whisperOut_.val09.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val09.subject.length());
-                                whisperStateOut.val09.value = whisperOut_.val09.value;                
-                                memset(whisperStateOut.val10.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val10.subject, whisperOut_.val10.subject.c_str(), whisperOut_.val10.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val10.subject.length());
-                                whisperStateOut.val10.value = whisperOut_.val10.value;                
-                                memset(whisperStateOut.val11.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val11.subject, whisperOut_.val11.subject.c_str(), whisperOut_.val11.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val11.subject.length());
-                                whisperStateOut.val11.value = whisperOut_.val11.value;                
-                                memset(whisperStateOut.val12.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val12.subject, whisperOut_.val12.subject.c_str(), whisperOut_.val12.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val12.subject.length());
-                                whisperStateOut.val12.value = whisperOut_.val12.value;                
-                                memset(whisperStateOut.val13.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val13.subject, whisperOut_.val13.subject.c_str(), whisperOut_.val13.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val13.subject.length());
-                                whisperStateOut.val13.value = whisperOut_.val13.value;                
-                                memset(whisperStateOut.val14.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val14.subject, whisperOut_.val14.subject.c_str(), whisperOut_.val14.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val14.subject.length());
-                                whisperStateOut.val14.value = whisperOut_.val14.value;                
-                                memset(whisperStateOut.val15.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val15.subject, whisperOut_.val15.subject.c_str(), whisperOut_.val15.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val15.subject.length());
-                                whisperStateOut.val15.value = whisperOut_.val15.value;                
-                                memset(whisperStateOut.val16.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val16.subject, whisperOut_.val16.subject.c_str(), whisperOut_.val16.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val16.subject.length());
-                                whisperStateOut.val16.value = whisperOut_.val16.value;                
-                                memset(whisperStateOut.val17.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val17.subject, whisperOut_.val17.subject.c_str(), whisperOut_.val17.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val17.subject.length());
-                                whisperStateOut.val17.value = whisperOut_.val17.value;                
-                                memset(whisperStateOut.val18.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val18.subject, whisperOut_.val18.subject.c_str(), whisperOut_.val18.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val18.subject.length());
-                                whisperStateOut.val18.value = whisperOut_.val18.value;                
-                                memset(whisperStateOut.val19.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val19.subject, whisperOut_.val19.subject.c_str(), whisperOut_.val19.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val19.subject.length());
-                                whisperStateOut.val19.value = whisperOut_.val19.value;                
-                                memset(whisperStateOut.val20.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val20.subject, whisperOut_.val20.subject.c_str(), whisperOut_.val20.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val20.subject.length());
-                                whisperStateOut.val20.value = whisperOut_.val20.value;                
-                                memset(whisperStateOut.val21.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val21.subject, whisperOut_.val21.subject.c_str(), whisperOut_.val21.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val21.subject.length());
-                                whisperStateOut.val21.value = whisperOut_.val21.value;                
-                                memset(whisperStateOut.val22.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val22.subject, whisperOut_.val22.subject.c_str(), whisperOut_.val22.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val22.subject.length());
-                                whisperStateOut.val22.value = whisperOut_.val22.value;                
-                                memset(whisperStateOut.val23.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val23.subject, whisperOut_.val23.subject.c_str(), whisperOut_.val23.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val23.subject.length());
-                                whisperStateOut.val23.value = whisperOut_.val23.value;                
-                                memset(whisperStateOut.val24.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val24.subject, whisperOut_.val24.subject.c_str(), whisperOut_.val24.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val24.subject.length());
-                                whisperStateOut.val24.value = whisperOut_.val24.value;                
-                                memset(whisperStateOut.val25.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val25.subject, whisperOut_.val25.subject.c_str(), whisperOut_.val25.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val25.subject.length());
-                                whisperStateOut.val25.value = whisperOut_.val25.value;                
-                                memset(whisperStateOut.val26.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val26.subject, whisperOut_.val26.subject.c_str(), whisperOut_.val26.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val26.subject.length());
-                                whisperStateOut.val26.value = whisperOut_.val26.value;                
-                                memset(whisperStateOut.val27.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val27.subject, whisperOut_.val27.subject.c_str(), whisperOut_.val27.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val27.subject.length());
-                                whisperStateOut.val27.value = whisperOut_.val27.value;                
-                                memset(whisperStateOut.val28.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val28.subject, whisperOut_.val28.subject.c_str(), whisperOut_.val28.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val28.subject.length());
-                                whisperStateOut.val28.value = whisperOut_.val28.value;                
-                                memset(whisperStateOut.val29.subject, '\0', SUBJECT_SIZE);
-                                memcpy(whisperStateOut.val29.subject, whisperOut_.val29.subject.c_str(), whisperOut_.val29.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val29.subject.length());
-                                whisperStateOut.val29.value = whisperOut_.val29.value;
-                                #endif
-
-                                #if 0
-                                #else							
-                                byte_size = sizeof(command) + sizeof(whisperStateOut);
-                                u8_ptr = (char*)&byte_size;
-                                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                                u8_ptr = (char*)&command;
-                                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                                u8_ptr = (char*)&whisperStateOut;
-                                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(whisperStateOut));
-                                buffer[ACK_IDX] = ACK_ONE;
-                                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(whisperStateOut), 0);
-                                #endif
-                            } else {
-                            }
-                        break;
                         case SetSensor:
-                            printf("Receviced SetSensor, trail byte(%d)\n", trail_len-COMMAND_SIZE);
-                            memcpy(&sensor, buffer+COMMAND_SIZE, sizeof(uint32_t));
-                            printf("sensor: %d\n", sensor);
-
-                            now = ros::Time::now();
-                            chatIn.header.stamp = now;
-
-                            chatIn.sensor = sensor;
-
-                            // chatIn_pub->publish(chatIn);
-                        break;
                         default:
                             printf("unknown command\n");
                     }
@@ -984,311 +314,7 @@ void fThread(int* thread_rate, ros::Publisher *chatIn_pub) {
             } else {
             }
 
-            #if 0
-            static PosStateOut posStateTest = {0.0, 10.0, 0.0, 0.0};
-            #if 1
-            #define SEND_PERIOD_MS	10
-            if (SEND_PERIOD_MS <= (ts_now-ts_dummy)) {
-                ts_dummy = ts_now;
-
-                posStateTest.x += 0.1;
-                posStateTest.y -= 0.1;
-                posStateTest.rz = posStateTest.x + 1;
-                posStateTest.ang = posStateTest.y + 2;
-                if (posStateTest.x > 10.0) {
-                    posStateTest.x = 0.0;
-                    posStateTest.y = 10.0;
-                }
-
-                command = SetPos;
-                // 전체 송신할 바이트 계산
-                byte_size = sizeof(command) + sizeof(posStateTest);
-                u8_ptr = (char*)&byte_size;
-                send(client_sock, u8_ptr, sizeof(byte_size), 0);
-
-                u8_ptr = (char*)&command;
-                send(client_sock, u8_ptr, sizeof(command), 0);
-
-                // printf("count: %d\tdec: %d\toffset: %d\n", t.count, t.dec, t.offset);
-                u8_ptr = (char*)&posStateTest;
-                send(client_sock, u8_ptr, sizeof(posStateTest), 0);
-
-                // printf("timestamp now : %ld\n", ts_now);
-            }
-            #else				
-            posStateTest.x += 0.1;
-            posStateTest.y -= 0.1;
-            posStateTest.rz = posStateTest.x + 1;
-            posStateTest.ang = posStateTest.y + 2;
-            if (posStateTest.x > 10.0) {
-                posStateTest.x = 0.0;
-                posStateTest.y = 10.0;
-            }
-
-            command = SetPos;
-            byte_size = sizeof(command) + sizeof(posStateTest);
-            u8_ptr = (char*)&byte_size;
-            memcpy(buffer, u8_ptr, sizeof(byte_size));
-            u8_ptr = (char*)&command;
-            memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-            u8_ptr = (char*)&posStateTest;
-            memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(posStateTest));
-            send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(posStateTest), 0);
-
-            usleep(10000);
-
-            // printf("usleep now : %ld\n", ts_now);
-            #endif
-            #endif
-
             // printf("milli: %ld %ld\n", msecs_time, sizeof(msecs_time));
-            
-            if (totalState.period !=0 && totalState.period <= (ts_now-ts_total)) {
-                ts_total = ts_now;
-
-                // 전체 송신할 바이트 계산
-                #if TCP_DUMMY_SEND                                
-                totalStateOut.sensor.front += 1;
-                totalStateOut.sensor.back += 2;
-                totalStateOut.sensor.right_front += 3;
-                totalStateOut.sensor.right_back += 4;
-
-                totalStateOut.pos.x += 5;
-                totalStateOut.pos.y += 6;
-                totalStateOut.pos.rz += 7;
-                totalStateOut.pos.ang += 8;
-
-                totalStateOut.platform.mode += 8;
-                totalStateOut.platform.state += 9;
-                #else
-                totalStateOut.sensor.front = chatOut_.sensorState.front;
-                totalStateOut.sensor.back = chatOut_.sensorState.back;
-                totalStateOut.sensor.right_front = chatOut_.sensorState.right_front;
-                totalStateOut.sensor.right_back = chatOut_.sensorState.right_back;
-                
-                totalStateOut.pos.x = chatOut_.posState.x;
-                totalStateOut.pos.y = chatOut_.posState.y;
-                totalStateOut.pos.rz = chatOut_.posState.rz;
-                totalStateOut.pos.ang = chatOut_.posState.ang;
-
-                totalStateOut.platform.mode = chatOut_.platformState.mode;
-                totalStateOut.platform.state = chatOut_.platformState.state; 
-                #endif
-
-                command = GetTotal;
-
-                byte_size = sizeof(command) + sizeof(totalStateOut);
-                u8_ptr = (char*)&byte_size;
-                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                u8_ptr = (char*)&command;
-                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                u8_ptr = (char*)&totalStateOut;
-                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(totalStateOut));
-                buffer[ACK_IDX] = ACK_STR;
-                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(totalStateOut), 0);
-            }
-            
-            if (platformState.period !=0 && platformState.period <= (ts_now-ts_platform)) {
-                ts_platform = ts_now;
-
-                // 전체 송신할 바이트 계산
-                #if TCP_DUMMY_SEND
-                platformStateOut.mode += 1;
-                platformStateOut.state += 2;
-                #else
-                platformStateOut.mode = chatOut_.platformState.mode;
-                platformStateOut.state = chatOut_.platformState.state; 
-                #endif
-
-                command = GetPlatform;
-
-                byte_size = sizeof(command) + sizeof(platformStateOut);
-                u8_ptr = (char*)&byte_size;
-                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                u8_ptr = (char*)&command;
-                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                u8_ptr = (char*)&platformStateOut;
-                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(platformStateOut));
-                buffer[ACK_IDX] = ACK_STR;
-                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(platformStateOut), 0);
-            }
-            
-            if (sensorState.period !=0 && sensorState.period <= (ts_now-ts_sensor)) {
-                ts_sensor = ts_now;
-
-                // 전체 송신할 바이트 계산
-                #if TCP_DUMMY_SEND
-                sensorStateOut.front += 1;
-                sensorStateOut.back += 2;
-                sensorStateOut.right_front += 3;
-                sensorStateOut.right_back += 4;
-                #else
-                sensorStateOut.front = chatOut_.sensorState.front;
-                sensorStateOut.back = chatOut_.sensorState.back;
-                sensorStateOut.right_front = chatOut_.sensorState.right_front;
-                sensorStateOut.right_back = chatOut_.sensorState.right_back;
-                #endif
-
-                command = GetSensor;
-
-                byte_size = sizeof(command) + sizeof(sensorStateOut);
-                u8_ptr = (char*)&byte_size;
-                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                u8_ptr = (char*)&command;
-                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                u8_ptr = (char*)&sensorStateOut;
-                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(sensorStateOut));
-                buffer[ACK_IDX] = ACK_STR;
-                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(sensorStateOut), 0);
-            }
-            
-            if (posState.period !=0 && posState.period <= (ts_now-ts_position)) {
-                ts_position = ts_now;
-
-                // 전체 송신할 바이트 계산
-                #if TCP_DUMMY_SEND
-                posStateOut.x += 1;
-                posStateOut.y += 2;
-                posStateOut.rz += 3;
-                posStateOut.ang += 4;
-                #else
-                posStateOut.x = chatOut_.posState.x;
-                posStateOut.y = chatOut_.posState.y;
-                posStateOut.rz = chatOut_.posState.rz;
-                posStateOut.ang = chatOut_.posState.ang;
-                #endif
-
-                command = GetPos;
-
-                byte_size = sizeof(command) + sizeof(posStateOut);
-                u8_ptr = (char*)&byte_size;
-                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                u8_ptr = (char*)&command;
-                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                u8_ptr = (char*)&posStateOut;
-                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(posStateOut));
-                buffer[ACK_IDX] = ACK_STR;
-                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(posStateOut), 0);
-            }
-            
-            if (whisperState.period !=0 && whisperState.period <= (ts_now-ts_whisper)) {
-                ts_whisper = ts_now;
-
-                // 전체 송신할 바이트 계산
-                #if TCP_DUMMY_SEND
-                whisperOut_.val00.subject = "val00val00val00val00";
-                memset(whisperStateOut.val00.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val00.subject, whisperOut_.val00.subject.c_str(), whisperOut_.val00.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val00.subject.length());
-                whisperStateOut.val00.value += 1;
-                whisperOut_.val19.subject = "val19val19val19val19";
-                memset(whisperStateOut.val19.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val19.subject, whisperOut_.val19.subject.c_str(), whisperOut_.val19.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val19.subject.length());
-                whisperStateOut.val19.value += 2;
-                #else
-                memset(whisperStateOut.val00.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val00.subject, whisperOut_.val00.subject.c_str(), whisperOut_.val00.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val00.subject.length());
-                whisperStateOut.val00.value = whisperOut_.val00.value;                
-                memset(whisperStateOut.val01.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val01.subject, whisperOut_.val01.subject.c_str(), whisperOut_.val01.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val01.subject.length());
-                whisperStateOut.val01.value = whisperOut_.val01.value;                
-                memset(whisperStateOut.val02.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val02.subject, whisperOut_.val02.subject.c_str(), whisperOut_.val02.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val02.subject.length());
-                whisperStateOut.val02.value = whisperOut_.val02.value;                
-                memset(whisperStateOut.val03.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val03.subject, whisperOut_.val03.subject.c_str(), whisperOut_.val03.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val03.subject.length());
-                whisperStateOut.val03.value = whisperOut_.val03.value;                
-                memset(whisperStateOut.val04.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val04.subject, whisperOut_.val04.subject.c_str(), whisperOut_.val04.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val04.subject.length());
-                whisperStateOut.val04.value = whisperOut_.val04.value;                
-                memset(whisperStateOut.val05.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val05.subject, whisperOut_.val05.subject.c_str(), whisperOut_.val05.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val05.subject.length());
-                whisperStateOut.val05.value = whisperOut_.val05.value;                
-                memset(whisperStateOut.val06.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val06.subject, whisperOut_.val06.subject.c_str(), whisperOut_.val06.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val06.subject.length());
-                whisperStateOut.val06.value = whisperOut_.val06.value;                
-                memset(whisperStateOut.val07.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val07.subject, whisperOut_.val07.subject.c_str(), whisperOut_.val07.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val07.subject.length());
-                whisperStateOut.val07.value = whisperOut_.val07.value;                
-                memset(whisperStateOut.val08.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val08.subject, whisperOut_.val08.subject.c_str(), whisperOut_.val08.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val08.subject.length());
-                whisperStateOut.val08.value = whisperOut_.val08.value;                
-                memset(whisperStateOut.val09.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val09.subject, whisperOut_.val09.subject.c_str(), whisperOut_.val09.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val09.subject.length());
-                whisperStateOut.val09.value = whisperOut_.val09.value;                
-                memset(whisperStateOut.val10.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val10.subject, whisperOut_.val10.subject.c_str(), whisperOut_.val10.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val10.subject.length());
-                whisperStateOut.val10.value = whisperOut_.val10.value;                
-                memset(whisperStateOut.val11.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val11.subject, whisperOut_.val11.subject.c_str(), whisperOut_.val11.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val11.subject.length());
-                whisperStateOut.val11.value = whisperOut_.val11.value;                
-                memset(whisperStateOut.val12.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val12.subject, whisperOut_.val12.subject.c_str(), whisperOut_.val12.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val12.subject.length());
-                whisperStateOut.val12.value = whisperOut_.val12.value;                
-                memset(whisperStateOut.val13.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val13.subject, whisperOut_.val13.subject.c_str(), whisperOut_.val13.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val13.subject.length());
-                whisperStateOut.val13.value = whisperOut_.val13.value;                
-                memset(whisperStateOut.val14.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val14.subject, whisperOut_.val14.subject.c_str(), whisperOut_.val14.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val14.subject.length());
-                whisperStateOut.val14.value = whisperOut_.val14.value;                
-                memset(whisperStateOut.val15.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val15.subject, whisperOut_.val15.subject.c_str(), whisperOut_.val15.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val15.subject.length());
-                whisperStateOut.val15.value = whisperOut_.val15.value;                
-                memset(whisperStateOut.val16.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val16.subject, whisperOut_.val16.subject.c_str(), whisperOut_.val16.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val16.subject.length());
-                whisperStateOut.val16.value = whisperOut_.val16.value;                
-                memset(whisperStateOut.val17.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val17.subject, whisperOut_.val17.subject.c_str(), whisperOut_.val17.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val17.subject.length());
-                whisperStateOut.val17.value = whisperOut_.val17.value;                
-                memset(whisperStateOut.val18.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val18.subject, whisperOut_.val18.subject.c_str(), whisperOut_.val18.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val18.subject.length());
-                whisperStateOut.val18.value = whisperOut_.val18.value;                
-                memset(whisperStateOut.val19.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val19.subject, whisperOut_.val19.subject.c_str(), whisperOut_.val19.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val19.subject.length());
-                whisperStateOut.val19.value = whisperOut_.val19.value;                
-                memset(whisperStateOut.val20.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val20.subject, whisperOut_.val20.subject.c_str(), whisperOut_.val20.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val20.subject.length());
-                whisperStateOut.val20.value = whisperOut_.val20.value;                
-                memset(whisperStateOut.val21.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val21.subject, whisperOut_.val21.subject.c_str(), whisperOut_.val21.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val21.subject.length());
-                whisperStateOut.val21.value = whisperOut_.val21.value;                
-                memset(whisperStateOut.val22.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val22.subject, whisperOut_.val22.subject.c_str(), whisperOut_.val22.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val22.subject.length());
-                whisperStateOut.val22.value = whisperOut_.val22.value;                
-                memset(whisperStateOut.val23.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val23.subject, whisperOut_.val23.subject.c_str(), whisperOut_.val23.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val23.subject.length());
-                whisperStateOut.val23.value = whisperOut_.val23.value;                
-                memset(whisperStateOut.val24.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val24.subject, whisperOut_.val24.subject.c_str(), whisperOut_.val24.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val24.subject.length());
-                whisperStateOut.val24.value = whisperOut_.val24.value;                
-                memset(whisperStateOut.val25.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val25.subject, whisperOut_.val25.subject.c_str(), whisperOut_.val25.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val25.subject.length());
-                whisperStateOut.val25.value = whisperOut_.val25.value;                
-                memset(whisperStateOut.val26.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val26.subject, whisperOut_.val26.subject.c_str(), whisperOut_.val26.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val26.subject.length());
-                whisperStateOut.val26.value = whisperOut_.val26.value;                
-                memset(whisperStateOut.val27.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val27.subject, whisperOut_.val27.subject.c_str(), whisperOut_.val27.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val27.subject.length());
-                whisperStateOut.val27.value = whisperOut_.val27.value;                
-                memset(whisperStateOut.val28.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val28.subject, whisperOut_.val28.subject.c_str(), whisperOut_.val28.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val28.subject.length());
-                whisperStateOut.val28.value = whisperOut_.val28.value;                
-                memset(whisperStateOut.val29.subject, '\0', SUBJECT_SIZE);
-                memcpy(whisperStateOut.val29.subject, whisperOut_.val29.subject.c_str(), whisperOut_.val29.subject.length()>SUBJECT_SIZE?SUBJECT_SIZE:whisperOut_.val29.subject.length());
-                whisperStateOut.val29.value = whisperOut_.val29.value;
-                #endif
-
-                command = GetWhisper;
-                	
-                byte_size = sizeof(command) + sizeof(whisperStateOut);
-                u8_ptr = (char*)&byte_size;
-                memcpy(buffer, u8_ptr, sizeof(byte_size));
-                u8_ptr = (char*)&command;
-                memcpy(buffer+sizeof(byte_size), u8_ptr, sizeof(command));
-                u8_ptr = (char*)&whisperStateOut;
-                memcpy(buffer+sizeof(byte_size)+sizeof(command), u8_ptr, sizeof(whisperStateOut));
-                buffer[ACK_IDX] = ACK_STR;
-                send(client_sock, buffer, sizeof(byte_size)+sizeof(command)+sizeof(whisperStateOut), 0);
-            }
         }
         printf("tcp read/write end\n");
         
@@ -1310,27 +336,24 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "yapper");
     ros::NodeHandle nh("~");
     
-    ros::Subscriber chatOut_sub = nh.subscribe("/yapper/chatOut_topic", 100, chatOutCallBack);
-    ros::Subscriber whisperOut_sub = nh.subscribe("/yapper/whisperOut_topic", 100, whisperOutCallBack);
-    
-    ros::Publisher chatIn_pub = nh.advertise<yapper::ChatIn>("chatIn_topic", 100);
+    ros::Publisher yapIn_pub = nh.advertise<yapper::YapIn>("yapIn_topic", 100);
 
     int thread_rate = 200;
-    boost::thread hThread(fThread, &thread_rate, &chatIn_pub);
+    boost::thread hThread(fThread, &thread_rate, &yapIn_pub);
 
     ros::Rate main_rate(1000);
 
-    double time_cur = ros::Time::now().toSec();
-    double time_pre = time_cur;
-    double time_diff;
+    double ts_cur = ros::Time::now().toSec();
+    double ts_pre = ts_cur;
+    double ts_diff;
 
     while(ros::ok())
     {
-        time_cur = ros::Time::now().toSec();
-        time_diff = time_cur - time_pre;
+        ts_cur = ros::Time::now().toSec();
+        ts_diff = ts_cur - ts_pre;
 #define PERIOD  0.1
-        if ( time_diff > PERIOD) {
-            time_pre = time_cur;
+        if ( ts_diff > PERIOD) {
+            ts_pre = ts_cur;
         }
 
         ros::spinOnce();

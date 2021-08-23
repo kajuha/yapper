@@ -1,2 +1,0 @@
-JogInfo jogInfo
-VelParams velParams

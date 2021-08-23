@@ -4,6 +4,6 @@
 	</include>
 
 	<include file="$(find yapper)/launch/client_local.launch">
-    	<arg name="user_name" value="recipelab"/>
+    	<arg name="user_name" value="kajuha"/>
 	</include>
 </launch>

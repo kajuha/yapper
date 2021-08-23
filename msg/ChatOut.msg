@@ -1,4 +1,0 @@
-Header header
-SensorState sensorState
-PosStateOut posState
-PlatformState platformState
