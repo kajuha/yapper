@@ -16,6 +16,9 @@
 		<Item Name="mainVI" Type="Folder" URL="../mainVI">
 			<Property Name="NI.DISK" Type="Bool">true</Property>
 		</Item>
+		<Item Name="setting" Type="Folder" URL="../setting">
+			<Property Name="NI.DISK" Type="Bool">true</Property>
+		</Item>
 		<Item Name="subVI" Type="Folder" URL="../subVI">
 			<Property Name="NI.DISK" Type="Bool">true</Property>
 		</Item>
@@ -78,7 +81,7 @@
 				<Property Name="Bld_localDestDir" Type="Path">/home/kajuha/catkin_ws/src/yapper/builds/executable</Property>
 				<Property Name="Bld_modifyLibraryFile" Type="Bool">true</Property>
 				<Property Name="Bld_previewCacheID" Type="Str">{77B7CC5C-B585-11EB-91FF-B4A9FCDF48BD}</Property>
-				<Property Name="Bld_version.build" Type="Int">39</Property>
+				<Property Name="Bld_version.build" Type="Int">40</Property>
 				<Property Name="Bld_version.major" Type="Int">1</Property>
 				<Property Name="DestinationCount" Type="Int">2</Property>
 				<Property Name="Destination[0].destName" Type="Str">tcp_ui.exe</Property>
